@@ -1,0 +1,49 @@
+import { MongoClient, type Collection, type Db, type ObjectId } from "mongodb";
+
+import type { Mode } from "@/lib/engine";
+import type { CharStats, Sample } from "@/lib/metrics";
+
+export type ResultDoc = {
+  _id: ObjectId;
+  userId: string;
+  clientId: string;
+  username: string;
+  image: string | null;
+  ts: number;
+  mode: Mode;
+  modeKey: string;
+  durationMs: number;
+  wpm: number;
+  raw: number;
+  accuracy: number;
+  consistency: number;
+  chars: CharStats;
+  keystrokes: number;
+  errors: number;
+  samples: Sample[];
+};
+
+declare global {
+  var typeflowMongoClient: MongoClient | undefined;
+}
+
+function getClient(): MongoClient {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    throw new Error("MONGODB_URI is required to use TypeFlow's server features.");
+  }
+
+  if (!globalThis.typeflowMongoClient) {
+    globalThis.typeflowMongoClient = new MongoClient(uri);
+  }
+  return globalThis.typeflowMongoClient;
+}
+
+export async function getDb(): Promise<Db> {
+  return getClient().db(process.env.MONGODB_DB || "typeflow");
+}
+
+export async function collections(): Promise<{ results: Collection<ResultDoc> }> {
+  const db = await getDb();
+  return { results: db.collection<ResultDoc>("results") };
+}

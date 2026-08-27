@@ -2,13 +2,17 @@
   "name": "typing",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "db:indexes": "node --experimental-strip-types lib/db/indexes.ts",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "better-auth": "^1.7.2",
+    "mongodb": "^7.6.0",
     "next": "16.3.3",
     "react": "19.2.8",
     "react-dom": "19.2.8"
