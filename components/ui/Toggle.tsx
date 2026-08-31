@@ -16,15 +16,17 @@ export function Toggle({
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors duration-200 ease-[var(--ease)] ${
-        checked ? "border-transparent bg-accent" : "border-border bg-surface-hover"
+      className={`relative h-7 w-12 shrink-0 rounded-full border p-0 transition-[background-color,border-color,box-shadow] duration-200 ease-[var(--ease)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:ring-offset-bg ${
+        checked
+          ? "border-accent bg-accent shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--accent)_75%,white)]"
+          : "border-border bg-surface-hover hover:border-sub"
       }`}
     >
       <span
-        className={`absolute top-0.5 h-4.5 w-4.5 rounded-full bg-white shadow transition-transform duration-200 ease-[var(--ease)] ${
-          checked ? "translate-x-[22px]" : "translate-x-0.5"
+        aria-hidden="true"
+        className={`absolute left-1 top-1 h-[18px] w-[18px] rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.35)] transition-transform duration-200 ease-[var(--ease)] ${
+          checked ? "translate-x-5" : "translate-x-0"
         }`}
-        style={{ height: 18, width: 18 }}
       />
     </button>
   );
