@@ -40,11 +40,14 @@ export type StoredResult = {
 export type ThemePreference = "dark" | "light" | "system";
 export type AccentName = "violet" | "blue" | "emerald" | "amber";
 export type CaretStyle = "line" | "block" | "underline";
+export type GhostOpponent = "personal-best" | "last-attempt";
 
 export type Settings = {
   theme: ThemePreference;
   accent: AccentName;
   sound: boolean;
+  ghostRace: boolean;
+  ghostOpponent: GhostOpponent;
   smoothCaret: boolean;
   caretStyle: CaretStyle;
   username: string;
@@ -54,6 +57,8 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: "dark",
   accent: "violet",
   sound: false,
+  ghostRace: false,
+  ghostOpponent: "personal-best",
   smoothCaret: true,
   caretStyle: "line",
   username: "You",

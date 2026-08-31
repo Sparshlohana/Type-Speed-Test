@@ -15,6 +15,7 @@ import {
   ACCENT_HEX,
   type AccentName,
   type CaretStyle,
+  type GhostOpponent,
   type ThemePreference,
 } from "@/lib/storage";
 
@@ -28,6 +29,11 @@ const CARETS: { value: CaretStyle; label: string }[] = [
   { value: "line", label: "Line" },
   { value: "block", label: "Block" },
   { value: "underline", label: "Underline" },
+];
+
+const GHOST_OPPONENTS: { value: GhostOpponent; label: string }[] = [
+  { value: "personal-best", label: "Personal best" },
+  { value: "last-attempt", label: "Last attempt" },
 ];
 
 const ACCENTS = Object.keys(ACCENT_HEX) as AccentName[];
@@ -149,6 +155,32 @@ export default function SettingsPage() {
             label="Sound effects"
           />
         </Row>
+
+        <Row
+          title="Ghost race"
+          description="Race a saved pace from the same test mode while you type."
+        >
+          <Toggle
+            checked={settings.ghostRace}
+            onChange={(ghostRace) => update({ ghostRace })}
+            label="Ghost race"
+          />
+        </Row>
+
+        {settings.ghostRace ? (
+          <Row
+            title="Ghost opponent"
+            description="Chase your fastest result or replay your most recent attempt."
+          >
+            <Segmented
+              options={GHOST_OPPONENTS}
+              value={settings.ghostOpponent}
+              onChange={(ghostOpponent) => update({ ghostOpponent })}
+              ariaLabel="Ghost opponent"
+              size="sm"
+            />
+          </Row>
+        ) : null}
 
         <Row
           title="Username"

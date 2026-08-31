@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 
 import { LiveStats } from "./LiveStats";
+import { GhostRace } from "./GhostRace";
 import { ResultsPanel } from "./ResultsPanel";
 import { TestConfigBar } from "./TestConfigBar";
 import { TypingArea } from "./TypingArea";
@@ -24,8 +25,14 @@ export function TestRunner({
   onFinished?: (finished: FinishedResult) => void;
 }) {
   const { settings } = useSettings();
-  const { state, live, finished, onChar, onSpace, onBackspace, restart, startNewTest } =
-    useTypingTest({ mode, soundEnabled: settings.sound, onFinished });
+  const { state, live, ghost, finished, onChar, onSpace, onBackspace, restart, startNewTest } =
+    useTypingTest({
+      mode,
+      soundEnabled: settings.sound,
+      ghostEnabled: settings.ghostRace,
+      ghostOpponent: settings.ghostOpponent,
+      onFinished,
+    });
 
   const isFinished = state.status === "finished";
 
@@ -62,6 +69,8 @@ export function TestRunner({
       ) : null}
 
       <LiveStats live={live} visible={state.status === "running"} />
+
+      <GhostRace race={ghost} typingStatus={state.status} />
 
       <TypingArea
         state={state}

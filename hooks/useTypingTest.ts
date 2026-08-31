@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
+import { getResultDetails } from "@/app/actions/results";
 import {
   analyze,
   backspace as applyBackspace,
@@ -22,7 +23,13 @@ import {
   wpmFrom,
   type Sample,
 } from "@/lib/metrics";
-import { createResultId, personalBest, type StoredResult } from "@/lib/storage";
+import { ghostCorrectCharsAt, selectGhostResult } from "@/lib/ghost";
+import {
+  createResultId,
+  personalBest,
+  type GhostOpponent,
+  type StoredResult,
+} from "@/lib/storage";
 import { resultsStore } from "@/lib/store";
 import { playSound } from "@/lib/sound";
 import { summarizeWeaknesses } from "@/lib/weakness";
@@ -49,9 +56,25 @@ export type LiveStats = {
   progress: { done: number; total: number } | null;
 };
 
+export type GhostRaceState =
+  | { status: "empty"; opponent: GhostOpponent }
+  | { status: "loading"; opponent: GhostOpponent }
+  | { status: "unavailable"; opponent: GhostOpponent }
+  | {
+      status: "ready";
+      opponent: GhostOpponent;
+      resultWpm: number;
+      playerChars: number;
+      ghostChars: number;
+      finishChars: number;
+      ghostFinished: boolean;
+    };
+
 type Options = {
   mode: Mode;
   soundEnabled: boolean;
+  ghostEnabled: boolean;
+  ghostOpponent: GhostOpponent;
   onFinished?: (finished: FinishedResult) => void;
 };
 
@@ -70,11 +93,49 @@ function measure(snapshot: TestState, elapsedMs: number) {
  * Owns one run of the test. Mount this keyed by mode — a mode change is a new test,
  * and remounting is cheaper to reason about than resetting six pieces of state.
  */
-export function useTypingTest({ mode, soundEnabled, onFinished }: Options) {
+export function useTypingTest({
+  mode,
+  soundEnabled,
+  ghostEnabled,
+  ghostOpponent,
+  onFinished,
+}: Options) {
   const [state, setState] = useState<TestState>(() => newTest(mode));
   const [elapsedMs, setElapsedMs] = useState(0);
   const [samples, setSamples] = useState<Sample[]>([]);
   const [finished, setFinished] = useState<FinishedResult | null>(null);
+  const resultsSnapshot = useSyncExternalStore(
+    resultsStore.subscribe,
+    resultsStore.get,
+    resultsStore.getServer,
+  );
+  const ghostSummary = useMemo(
+    () => ghostEnabled
+      ? selectGhostResult(resultsSnapshot.results, modeKey(mode), ghostOpponent)
+      : null,
+    [ghostEnabled, ghostOpponent, mode, resultsSnapshot.results],
+  );
+  const [loadedGhost, setLoadedGhost] = useState<{
+    id: string;
+    result: StoredResult | null;
+  } | null>(null);
+
+  // Server result lists omit their heavier per-second samples. Fetch only the
+  // selected opponent, and only when the user has explicitly enabled ghost racing.
+  useEffect(() => {
+    if (!ghostEnabled || !ghostSummary || ghostSummary.samples.length > 0) return;
+    let cancelled = false;
+    void getResultDetails(ghostSummary.id)
+      .then((result) => {
+        if (!cancelled) setLoadedGhost({ id: ghostSummary.id, result });
+      })
+      .catch(() => {
+        if (!cancelled) setLoadedGhost({ id: ghostSummary.id, result: null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ghostEnabled, ghostSummary]);
 
   // Mirrors of state the interval and event handlers read without re-subscribing.
   const stateRef = useRef(state);
@@ -264,12 +325,37 @@ export function useTypingTest({ mode, soundEnabled, onFinished }: Options) {
     };
   }, [state, elapsedMs, mode]);
 
+  const ghost = useMemo<GhostRaceState | null>(() => {
+    if (!ghostEnabled) return null;
+    if (!ghostSummary) return { status: "empty", opponent: ghostOpponent };
+
+    const detailed = ghostSummary.samples.length > 0
+      ? ghostSummary
+      : loadedGhost?.id === ghostSummary.id
+        ? loadedGhost.result
+        : undefined;
+    if (detailed === undefined) return { status: "loading", opponent: ghostOpponent };
+    if (detailed === null) return { status: "unavailable", opponent: ghostOpponent };
+
+    const playerChars = measure(state, elapsedMs).chars.correct;
+    return {
+      status: "ready",
+      opponent: ghostOpponent,
+      resultWpm: detailed.wpm,
+      playerChars,
+      ghostChars: ghostCorrectCharsAt(detailed, elapsedMs),
+      finishChars: Math.max(1, detailed.chars.correct),
+      ghostFinished: elapsedMs >= detailed.durationMs,
+    };
+  }, [elapsedMs, ghostEnabled, ghostOpponent, ghostSummary, loadedGhost, state]);
+
   return {
     state,
     live,
     samples,
     finished,
     elapsedMs,
+    ghost,
     onChar,
     onSpace,
     onBackspace,
