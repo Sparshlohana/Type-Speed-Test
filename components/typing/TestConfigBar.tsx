@@ -11,10 +11,10 @@ const QUOTE_PRESETS: QuoteLength[] = ["short", "medium", "long"];
 
 const MIN_CUSTOM_SECONDS = 5;
 const MAX_CUSTOM_SECONDS = 600;
-const DIFFICULTIES: { value: Difficulty; label: string; description: string }[] = [
-  { value: "easy", label: "Easy", description: "Short, common words" },
-  { value: "normal", label: "Normal", description: "Balanced vocabulary" },
-  { value: "hard", label: "Hard", description: "Long words, capitals, punctuation, and numbers" },
+const DIFFICULTIES: { value: Difficulty; label: string; caption: string; description: string }[] = [
+  { value: "easy", label: "Easy", caption: "short words", description: "Short, common words" },
+  { value: "normal", label: "Normal", caption: "balanced", description: "Balanced vocabulary" },
+  { value: "hard", label: "Hard", caption: "Caps · signs · 123", description: "Long words, capitals, punctuation, and numbers" },
 ];
 
 function Pill({
@@ -146,8 +146,11 @@ export function TestConfigBar({
       </div>
 
       {supportsDifficulty ? (
-        <div className="flex max-w-full flex-wrap items-center justify-center gap-1.5 text-xs">
-          <span className="mr-1 font-medium uppercase tracking-[0.12em] text-sub">Difficulty</span>
+        <div
+          role="group"
+          aria-label="Typing difficulty"
+          className="grid w-full max-w-md grid-cols-3 gap-1 rounded-xl border border-border bg-surface p-1"
+        >
           {DIFFICULTIES.map((option) => (
             <button
               key={option.value}
@@ -155,18 +158,18 @@ export function TestConfigBar({
               aria-pressed={difficulty === option.value}
               title={option.description}
               onClick={() => onChange({ ...mode, difficulty: option.value })}
-              className={`rounded-md px-2.5 py-1 font-medium transition-colors ${
+              className={`rounded-lg border px-3 py-2 text-center transition-all duration-200 ease-[var(--ease)] ${
                 difficulty === option.value
-                  ? "bg-accent-soft text-accent"
-                  : "text-sub hover:bg-surface hover:text-text"
+                  ? "border-[color-mix(in_srgb,var(--accent)_35%,transparent)] bg-accent-soft shadow-[0_4px_14px_-10px_var(--accent)]"
+                  : "border-transparent hover:bg-surface-hover"
               }`}
             >
-              {option.label}
+              <span className={`block text-xs font-semibold ${difficulty === option.value ? "text-accent" : "text-text"}`}>
+                {option.label}
+              </span>
+              <span className="mt-0.5 block truncate text-[10px] text-sub">{option.caption}</span>
             </button>
           ))}
-          <span className="ml-1 hidden text-sub sm:inline">
-            {DIFFICULTIES.find((option) => option.value === difficulty)?.description}
-          </span>
         </div>
       ) : null}
     </div>
