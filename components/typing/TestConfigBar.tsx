@@ -151,10 +151,10 @@ export function TestConfigBar({
           aria-label="Typing difficulty"
           className="inline-flex max-w-full items-center gap-1 rounded-xl border border-border bg-surface p-1 shadow-[0_8px_24px_-20px_rgba(0,0,0,0.8)]"
         >
-          <span className="px-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-sub">
+          <span className="inline-flex self-stretch items-center px-2.5 text-[9px] font-semibold uppercase leading-none tracking-[0.16em] text-sub">
             Level
           </span>
-          <span aria-hidden className="h-5 w-px bg-border" />
+          <span aria-hidden className="my-1 w-px self-stretch bg-border" />
           {DIFFICULTIES.map((option) => (
             <button
               key={option.value}
