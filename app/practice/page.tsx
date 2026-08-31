@@ -5,9 +5,39 @@ import { useMemo, useSyncExternalStore } from "react";
 import { TestRunner } from "@/components/typing/TestRunner";
 import type { Mode } from "@/lib/engine";
 import { resultsStore } from "@/lib/store";
-import { aggregateWeaknesses } from "@/lib/weakness";
+import { aggregateWeaknesses, type WeaknessProfile } from "@/lib/weakness";
 
 const PRACTICE_WORDS = 50;
+
+function coachingMessage(profile: WeaknessProfile): { title: string; body: string } {
+  if (!profile.hasHistory) {
+    return {
+      title: "First, let’s find what is slowing you down",
+      body: "Type this starter set naturally. As you make mistakes, TypeFlow will learn which keys and words need work, then build future sessions around them. Improving those weak spots will reduce corrections and help both your accuracy and WPM rise.",
+    };
+  }
+
+  const key = profile.keyErrors[0];
+  const word = profile.wordErrors[0];
+  if (key?.expected) {
+    return {
+      title: `Your biggest opportunity is the “${key.expected}” key`,
+      body: `In recent tests, you pressed “${key.actual}” instead of “${key.expected}” ${key.count} ${key.count === 1 ? "time" : "times"}${word ? `, and “${word.word}” has been a difficult word` : ""}. Those mistakes interrupt your rhythm and cost time through corrections. Focus on clean, deliberate presses in this session—fewer errors will improve accuracy and let your WPM increase naturally.`,
+    };
+  }
+
+  if (key) {
+    return {
+      title: "You tend to type past the end of words",
+      body: `This happened ${key.count} ${key.count === 1 ? "time" : "times"} in recent tests. Ease off slightly as you finish each word and aim for a clean space press. Removing these extra keystrokes will preserve your rhythm and improve both accuracy and WPM.`,
+    };
+  }
+
+  return {
+    title: word ? `The word “${word.word}” is slowing you down` : "Accuracy is your next speed gain",
+    body: "This session repeats the words that have interrupted your rhythm. Type them deliberately before trying to go faster. Once they become automatic, you will spend less time correcting mistakes and your score can improve.",
+  };
+}
 
 function KeyLabel({ value }: { value: string }) {
   return (
@@ -24,6 +54,7 @@ export default function PracticePage() {
     resultsStore.getServer,
   );
   const profile = useMemo(() => aggregateWeaknesses(results), [results]);
+  const coaching = useMemo(() => coachingMessage(profile), [profile]);
   const mode = useMemo<Mode>(
     () => ({
       kind: "practice",
@@ -54,7 +85,15 @@ export default function PracticePage() {
         </p>
       </header>
 
-      <section className="mt-6 grid gap-3 sm:grid-cols-2" aria-label="Current practice focus">
+      <aside className="mt-6 rounded-xl border border-[color-mix(in_srgb,var(--accent)_35%,var(--border))] bg-accent-soft p-5">
+        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-accent">
+          What this means for you
+        </p>
+        <h2 className="mt-2 text-base font-semibold text-text">{coaching.title}</h2>
+        <p className="mt-1 max-w-3xl text-sm leading-6 text-sub">{coaching.body}</p>
+      </aside>
+
+      <section className="mt-4 grid gap-3 sm:grid-cols-2" aria-label="Current practice focus">
         <div className="rounded-xl border border-border bg-surface p-4">
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-sub">Focus keys</p>
           <div className="mt-3 flex flex-wrap gap-2">
