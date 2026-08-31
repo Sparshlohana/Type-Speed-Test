@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { getLeaderboard } from "@/app/actions/leaderboard";
 import { Segmented, type SegmentOption } from "@/components/ui/Segmented";
 import { modeKey, modeLabel, type Difficulty, type Mode } from "@/lib/engine";
 import { initialsOf, round } from "@/lib/format";
@@ -79,23 +78,28 @@ export default function LeaderboardPage() {
   const selected = modeKey(mode);
 
   useEffect(() => {
-    let cancelled = false;
-    void getLeaderboard(selected)
-      .then((next) => {
-        if (!cancelled) setBoard(next);
+    const controller = new AbortController();
+    void fetch(`/api/leaderboard?modeKey=${encodeURIComponent(selected)}`, {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Leaderboard request failed");
+        return (await response.json()) as Board;
       })
-      .catch(() => {
-        if (!cancelled) {
-          setBoard({ entries: [], yourRank: null });
-          setUnavailable(true);
-        }
+      .then((next) => {
+        setBoard(next);
+        setUnavailable(false);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setBoard({ entries: [], yourRank: null });
+        setUnavailable(true);
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       });
-    return () => {
-      cancelled = true;
-    };
+    return () => controller.abort();
   }, [selected]);
 
   const prepareChange = () => {

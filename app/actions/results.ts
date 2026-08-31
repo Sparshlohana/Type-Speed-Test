@@ -1,8 +1,10 @@
 "use server";
 
 import { ObjectId, type OptionalId } from "mongodb";
+import { updateTag } from "next/cache";
 
 import { collections, type ResultDoc } from "@/lib/db/mongo";
+import { LEADERBOARD_CACHE_TAG } from "@/lib/server/leaderboard";
 import { getUser, requireUser } from "@/lib/server/session";
 import { validateResult } from "@/lib/server/validate";
 import type { StoredResult } from "@/lib/storage";
@@ -66,11 +68,12 @@ export async function saveResult(input: unknown): Promise<SaveResultResponse> {
     { sort: { wpm: -1, accuracy: -1 }, projection: { wpm: 1 } },
   );
 
-  await results.updateOne(
+  const write = await results.updateOne(
     { userId: user.id, clientId: validation.value.id },
     { $setOnInsert: { _id: new ObjectId(), ...toDocument(validation.value, user) } },
     { upsert: true },
   );
+  if (write.upsertedCount > 0) updateTag(LEADERBOARD_CACHE_TAG);
 
   return {
     ok: true,
@@ -93,7 +96,7 @@ export async function syncLocalResults(inputs: unknown): Promise<{ ok: boolean; 
 
   if (validated.length === 0) return { ok: true };
   const { results } = await collections();
-  await results.bulkWrite(
+  const write = await results.bulkWrite(
     validated.map((result) => ({
       updateOne: {
         filter: { userId: user.id, clientId: result.id },
@@ -103,6 +106,7 @@ export async function syncLocalResults(inputs: unknown): Promise<{ ok: boolean; 
     })),
     { ordered: false },
   );
+  if (write.upsertedCount > 0) updateTag(LEADERBOARD_CACHE_TAG);
   return { ok: true };
 }
 
@@ -130,5 +134,6 @@ export async function getResultDetails(clientId: unknown): Promise<StoredResult 
 export async function clearResults(): Promise<void> {
   const user = await requireUser();
   const { results } = await collections();
-  await results.deleteMany({ userId: user.id });
+  const write = await results.deleteMany({ userId: user.id });
+  if (write.deletedCount > 0) updateTag(LEADERBOARD_CACHE_TAG);
 }
