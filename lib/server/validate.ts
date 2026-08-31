@@ -5,7 +5,7 @@ import { DAILY_CHALLENGE_ID_PATTERN, DAILY_CHALLENGE_WORDS } from "@/lib/daily";
 import type { CharStats, Sample } from "@/lib/metrics";
 import type { StoredResult } from "@/lib/storage";
 
-const MODE_KEY_PATTERN = /^(time|words|quote|practice|daily):[a-z0-9]+$/;
+const MODE_KEY_PATTERN = /^(time|words|quote|practice|daily):[a-z0-9-]+$/;
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 
 type ValidationResult =
@@ -16,11 +16,15 @@ function finite(value: unknown, min = 0, max = Number.MAX_SAFE_INTEGER): value i
   return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
 }
 
+function validDifficulty(value: unknown): boolean {
+  return value === undefined || value === "easy" || value === "normal" || value === "hard";
+}
+
 function validMode(value: unknown): value is Mode {
   if (!value || typeof value !== "object") return false;
   const mode = value as Partial<Mode> & Record<string, unknown>;
-  if (mode.kind === "time") return finite(mode.seconds, 1, 3600);
-  if (mode.kind === "words") return finite(mode.count, 1, 10_000);
+  if (mode.kind === "time") return finite(mode.seconds, 1, 3600) && validDifficulty(mode.difficulty);
+  if (mode.kind === "words") return finite(mode.count, 1, 10_000) && validDifficulty(mode.difficulty);
   if (mode.kind === "quote") {
     return mode.length === "short" || mode.length === "medium" || mode.length === "long";
   }

@@ -6,7 +6,7 @@ import { collections } from "@/lib/db/mongo";
 import type { LeaderboardEntry } from "@/lib/leaderboard";
 import { getUser } from "@/lib/server/session";
 
-const MODE_KEY_PATTERN = /^(time|words|quote):[a-z0-9]+$/;
+const MODE_KEY_PATTERN = /^(time|words|quote):[a-z0-9-]+$/;
 
 type RankedRow = {
   _id: string;

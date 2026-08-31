@@ -35,6 +35,8 @@ Notable choices:
   throttled background tab cannot inflate or deflate a score.
 - **Consistency** is `1 - coefficient of variation` over the per-second raw WPM samples.
 - **Modes**: timed (15s / 30s / 60s / custom), fixed word counts, and quotes.
+- **Difficulty**: Easy uses short common words, Normal uses balanced vocabulary, and Hard
+  adds longer words, capitals, punctuation, and numbers. Scores stay separate by level.
 - **Adaptive practice**: records mistyped character pairs and problem words, then builds
   targeted 50-word sessions from the latest results.
 - **Daily challenge**: one deterministic 50-word test shared by everyone, with a best-attempt

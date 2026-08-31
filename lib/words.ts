@@ -217,6 +217,7 @@ export const WORD_BANK: readonly string[] = [
 ];
 
 export type QuoteLength = "short" | "medium" | "long";
+export type Difficulty = "easy" | "normal" | "hard";
 
 export type Quote = {
   text: string;
@@ -1132,14 +1133,27 @@ function pick<T>(items: readonly T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-/** Random words, never repeating the immediately previous word. */
-export function generateWords(count: number): string[] {
+const EASY_WORDS = WORD_BANK.slice(0, 500).filter((word) => word.length <= 5);
+const HARD_WORDS = WORD_BANK.filter((word) => word.length >= 7);
+const HARD_PUNCTUATION = [",", ".", ";", "?", "!"] as const;
+
+/** Generate text for a difficulty, never repeating the immediately previous token. */
+export function generateWords(count: number, difficulty: Difficulty = "normal"): string[] {
+  const pool = difficulty === "easy" ? EASY_WORDS : difficulty === "hard" ? HARD_WORDS : WORD_BANK;
   const out: string[] = [];
   let previous = "";
   for (let i = 0; i < count; i++) {
-    let word = pick(WORD_BANK);
+    let word = difficulty === "hard" && i % 7 === 6
+      ? String(Math.floor(Math.random() * 9_900) + 100)
+      : pick(pool);
+    if (difficulty === "hard" && i % 3 === 0 && !/^\d/.test(word)) {
+      word = word[0].toLocaleUpperCase() + word.slice(1);
+    }
+    if (difficulty === "hard" && i % 4 === 1) {
+      word += pick(HARD_PUNCTUATION);
+    }
     let guard = 0;
-    while (word === previous && guard++ < 8) word = pick(WORD_BANK);
+    while (word === previous && guard++ < 8) word = pick(pool);
     out.push(word);
     previous = word;
   }

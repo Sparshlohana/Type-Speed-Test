@@ -12,14 +12,15 @@ import {
   generateWords,
   quoteToWords,
   randomQuote,
+  type Difficulty,
   type Quote,
   type QuoteLength,
 } from "./words";
 import type { KeyMistake } from "./weakness";
 
 export type Mode =
-  | { kind: "time"; seconds: number }
-  | { kind: "words"; count: number }
+  | { kind: "time"; seconds: number; difficulty?: Difficulty }
+  | { kind: "words"; count: number; difficulty?: Difficulty }
   | { kind: "quote"; length: QuoteLength }
   | { kind: "practice"; count: number; focusChars: string[]; focusWords: string[] }
   | { kind: "daily"; challengeId: string; count: number };
@@ -54,12 +55,16 @@ export const DEFAULT_MODE: Mode = { kind: "time", seconds: 30 };
 const TIMED_WORD_BUFFER = 60;
 const WORDS_PER_SECOND_ALLOWANCE = 4;
 
+export function difficultyOf(mode: Mode): Difficulty {
+  return mode.kind === "time" || mode.kind === "words" ? mode.difficulty ?? "normal" : "normal";
+}
+
 export function modeKey(mode: Mode): string {
   switch (mode.kind) {
     case "time":
-      return `time:${mode.seconds}`;
+      return `time:${mode.seconds}${difficultyOf(mode) === "normal" ? "" : `-${difficultyOf(mode)}`}`;
     case "words":
-      return `words:${mode.count}`;
+      return `words:${mode.count}${difficultyOf(mode) === "normal" ? "" : `-${difficultyOf(mode)}`}`;
     case "quote":
       return `quote:${mode.length}`;
     case "practice":
@@ -72,9 +77,9 @@ export function modeKey(mode: Mode): string {
 export function modeLabel(mode: Mode): string {
   switch (mode.kind) {
     case "time":
-      return `${mode.seconds}s`;
+      return `${mode.seconds}s${difficultyOf(mode) === "normal" ? "" : ` · ${difficultyOf(mode)}`}`;
     case "words":
-      return `${mode.count} words`;
+      return `${mode.count} words${difficultyOf(mode) === "normal" ? "" : ` · ${difficultyOf(mode)}`}`;
     case "quote":
       return `${mode.length} quote`;
     case "practice":
@@ -89,11 +94,14 @@ export function buildTest(mode: Mode): { target: string[]; quote: Quote | null }
   switch (mode.kind) {
     case "time":
       return {
-        target: generateWords(TIMED_WORD_BUFFER + mode.seconds * WORDS_PER_SECOND_ALLOWANCE),
+        target: generateWords(
+          TIMED_WORD_BUFFER + mode.seconds * WORDS_PER_SECOND_ALLOWANCE,
+          difficultyOf(mode),
+        ),
         quote: null,
       };
     case "words":
-      return { target: generateWords(mode.count), quote: null };
+      return { target: generateWords(mode.count, difficultyOf(mode)), quote: null };
     case "quote": {
       const quote = randomQuote(mode.length);
       return { target: quoteToWords(quote), quote };
@@ -273,3 +281,4 @@ export function wordsCompleted(state: TestState): number {
 }
 
 export type { CharStats, Sample };
+export type { Difficulty };
