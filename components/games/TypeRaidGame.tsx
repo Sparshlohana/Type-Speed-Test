@@ -21,13 +21,29 @@ type Enemy = {
   color: string;
 };
 
-type UpgradeId = "blade" | "ward" | "heart" | "momentum" | "tempo" | "mercy";
+type UpgradeId =
+  | "blade"
+  | "ward"
+  | "heart"
+  | "momentum"
+  | "tempo"
+  | "mercy"
+  | "echo"
+  | "leech"
+  | "fracture"
+  | "execute"
+  | "rage"
+  | "phoenix";
+
+type UpgradeRarity = "common" | "rare" | "epic" | "legendary";
 
 type Upgrade = {
   id: UpgradeId;
   name: string;
   description: string;
   symbol: string;
+  kind: "offense" | "defense" | "utility";
+  rarity: UpgradeRarity;
 };
 
 const ENEMIES: readonly Enemy[] = [
@@ -38,13 +54,32 @@ const ENEMIES: readonly Enemy[] = [
 ] as const;
 
 const UPGRADES: readonly Upgrade[] = [
-  { id: "blade", name: "Tempered Keys", description: "+4 damage on every completed word.", symbol: "↑" },
-  { id: "ward", name: "Quiet Ward", description: "Enemy attacks deal 4 less damage.", symbol: "◇" },
-  { id: "heart", name: "Second Wind", description: "+18 maximum health and fully heal.", symbol: "+" },
-  { id: "momentum", name: "Combo Crown", description: "Combos add twice as much bonus damage.", symbol: "×" },
-  { id: "tempo", name: "Stolen Time", description: "Enemies take 1.2 seconds longer to attack.", symbol: "◷" },
-  { id: "mercy", name: "Soft Landing", description: "Typos cost 1 health instead of 3.", symbol: "∿" },
+  { id: "blade", name: "Tempered Keys", description: "+4 damage on every completed word.", symbol: "↑", kind: "offense", rarity: "common" },
+  { id: "ward", name: "Quiet Ward", description: "Enemy attacks deal 4 less damage.", symbol: "◇", kind: "defense", rarity: "common" },
+  { id: "heart", name: "Second Wind", description: "+18 maximum health and fully heal.", symbol: "+", kind: "defense", rarity: "common" },
+  { id: "mercy", name: "Soft Landing", description: "Typos cost 1 health instead of 3.", symbol: "∿", kind: "defense", rarity: "common" },
+  { id: "momentum", name: "Combo Crown", description: "Combos add twice as much bonus damage.", symbol: "×", kind: "offense", rarity: "rare" },
+  { id: "tempo", name: "Stolen Time", description: "Enemies take 1.2 seconds longer to attack.", symbol: "◷", kind: "utility", rarity: "rare" },
+  { id: "leech", name: "Vampiric Script", description: "Every clean word restores 2 health.", symbol: "♥", kind: "defense", rarity: "rare" },
+  { id: "rage", name: "Berserker Buffer", description: "+6 word damage while you are at or below half health.", symbol: "!", kind: "offense", rarity: "rare" },
+  { id: "echo", name: "Arcane Echo", description: "Every 4th clean word strikes twice for double damage.", symbol: "Ⅱ", kind: "offense", rarity: "epic" },
+  { id: "fracture", name: "Time Fracture", description: "Every clean word pushes the enemy timer back 0.45s.", symbol: "↶", kind: "utility", rarity: "epic" },
+  { id: "execute", name: "Execute.exe", description: "Deal double damage while the enemy is below 30% health.", symbol: "⌁", kind: "offense", rarity: "epic" },
+  { id: "phoenix", name: "Phoenix Cache", description: "Survive one lethal hit and return with 35 health.", symbol: "✦", kind: "defense", rarity: "legendary" },
 ] as const;
+
+const RARITY_META: Record<UpgradeRarity, { label: string; color: string; soft: string }> = {
+  common: { label: "Common", color: "#aeb1bd", soft: "rgba(174,177,189,.09)" },
+  rare: { label: "Rare", color: "#5ea6ff", soft: "rgba(94,166,255,.1)" },
+  epic: { label: "Epic", color: "#b77cff", soft: "rgba(183,124,255,.11)" },
+  legendary: { label: "Legendary", color: "#ffb84d", soft: "rgba(255,184,77,.12)" },
+};
+
+const RARITY_WEIGHTS: readonly Record<UpgradeRarity, number>[] = [
+  { common: 56, rare: 30, epic: 12, legendary: 2 },
+  { common: 40, rare: 36, epic: 20, legendary: 4 },
+  { common: 22, rare: 38, epic: 32, legendary: 8 },
+];
 
 const BEST_KEY = "typeflow.typeraid.best";
 const WORD_BATCH = 32;
@@ -53,10 +88,41 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function pickRewards(owned: readonly UpgradeId[]): Upgrade[] {
+function weightedUpgrade(pool: readonly Upgrade[], clearedRoom: number): Upgrade | undefined {
+  const weights = RARITY_WEIGHTS[Math.min(clearedRoom, RARITY_WEIGHTS.length - 1)];
+  const rarities = (Object.keys(weights) as UpgradeRarity[])
+    .filter((rarity) => pool.some((upgrade) => upgrade.rarity === rarity));
+  const total = rarities.reduce((sum, rarity) => sum + weights[rarity], 0);
+  if (total === 0) return pool[0];
+  let roll = Math.random() * total;
+  for (const rarity of rarities) {
+    roll -= weights[rarity];
+    if (roll <= 0) {
+      const matches = pool.filter((upgrade) => upgrade.rarity === rarity);
+      return matches[Math.floor(Math.random() * matches.length)];
+    }
+  }
+  return pool.at(-1);
+}
+
+function pickRewards(owned: readonly UpgradeId[], clearedRoom: number): Upgrade[] {
   const available = UPGRADES.filter((upgrade) => !owned.includes(upgrade.id));
   const pool = available.length >= 3 ? available : [...UPGRADES];
-  return [...pool].sort(() => Math.random() - 0.5).slice(0, 3);
+  const bossPrep = clearedRoom >= ENEMIES.length - 2;
+  const offensePool = pool.filter((upgrade) =>
+    upgrade.kind === "offense" && (!bossPrep || upgrade.rarity === "epic"),
+  );
+  const first = weightedUpgrade(offensePool.length > 0 ? offensePool : pool, clearedRoom);
+  const picks = first ? [first] : [];
+  while (picks.length < 3) {
+    const next = weightedUpgrade(
+      pool.filter((upgrade) => !picks.some((picked) => picked.id === upgrade.id)),
+      clearedRoom,
+    );
+    if (!next) break;
+    picks.push(next);
+  }
+  return picks;
 }
 
 function HealthBar({ value, max, color, label }: { value: number; max: number; color: string; label: string }) {
@@ -110,6 +176,7 @@ export function TypeRaidGame() {
   const [owned, setOwned] = useState<UpgradeId[]>([]);
   const [rewards, setRewards] = useState<Upgrade[]>([]);
   const [bestScore, setBestScore] = useState(0);
+  const [phoenixUsed, setPhoenixUsed] = useState(false);
   const [enemyHurt, setEnemyHurt] = useState(false);
   const [playerHurt, setPlayerHurt] = useState(false);
   const [floatText, setFloatText] = useState<string | null>(null);
@@ -122,6 +189,7 @@ export function TypeRaidGame() {
   const comboScale = owned.includes("momentum") ? 2 : 1;
   const attackBonus = owned.includes("tempo") ? 1_200 : 0;
   const typoDamage = owned.includes("mercy") ? 1 : 3;
+  const rageDamage = owned.includes("rage") && hp <= maxHp / 2 ? 6 : 0;
   const target = words[wordIndex] ?? words[0];
   const nextWords = words.slice(wordIndex + 1, wordIndex + 4);
   const accuracy = wordsTyped + errors === 0 ? 100 : (wordsTyped / (wordsTyped + errors)) * 100;
@@ -166,6 +234,7 @@ export function TypeRaidGame() {
     setOwned([]);
     setRewards([]);
     setElapsedMs(0);
+    setPhoenixUsed(false);
     setAttackLeft(first.attackMs);
     setPhase("briefing");
   }, []);
@@ -190,7 +259,7 @@ export function TypeRaidGame() {
       finishRun("victory", victoryScore);
       return;
     }
-    setRewards(pickRewards(owned));
+    setRewards(pickRewards(owned, room));
     setPhase("reward");
   }, [finishRun, hp, owned, room]);
 
@@ -198,7 +267,10 @@ export function TypeRaidGame() {
     const nextCombo = combo + 1;
     const comboDamage = Math.floor(nextCombo / 3) * 2 * comboScale;
     const critical = nextCombo > 0 && nextCombo % 8 === 0;
-    const damage = (10 + bonusDamage + comboDamage) * (critical ? 2 : 1);
+    const echoStrike = owned.includes("echo") && (wordsTyped + 1) % 4 === 0;
+    const executeStrike = owned.includes("execute") && enemyHp <= enemy.hp * 0.3;
+    const multiplier = (critical ? 2 : 1) * (echoStrike ? 2 : 1) * (executeStrike ? 2 : 1);
+    const damage = (10 + bonusDamage + comboDamage + rageDamage) * multiplier;
     const remaining = Math.max(0, enemyHp - damage);
     const nextScore = score + damage * 12 + nextCombo * 5 + room * 40;
 
@@ -207,16 +279,23 @@ export function TypeRaidGame() {
     setCombo(nextCombo);
     setBestCombo((current) => Math.max(current, nextCombo));
     setWordsTyped((current) => current + 1);
+    if (owned.includes("leech")) {
+      setHp((current) => Math.min(maxHp, current + 2));
+    }
+    if (owned.includes("fracture") && remaining > 0) {
+      setAttackLeft((current) => Math.min(enemy.attackMs + attackBonus, current + 450));
+    }
     setTyped("");
     setWordIndex((current) => {
       if (current < words.length - 5) return current + 1;
       setWords(generateWords(WORD_BATCH, enemy.difficulty));
       return 0;
     });
-    flash("enemy", critical ? `CRIT ${damage}` : `-${damage}`);
+    const hitLabel = echoStrike ? `ECHO ${damage}` : executeStrike ? `EXECUTE ${damage}` : critical ? `CRIT ${damage}` : `-${damage}`;
+    flash("enemy", hitLabel);
     if (settings.sound) playSound("key");
     if (remaining === 0) completeRoom(nextScore);
-  }, [bonusDamage, combo, comboScale, completeRoom, enemy.difficulty, enemyHp, flash, room, score, settings.sound, words.length]);
+  }, [attackBonus, bonusDamage, combo, comboScale, completeRoom, enemy.attackMs, enemy.difficulty, enemy.hp, enemyHp, flash, maxHp, owned, rageDamage, room, score, settings.sound, words.length, wordsTyped]);
 
   const registerTypo = useCallback(() => {
     setErrors((current) => current + 1);
@@ -224,12 +303,19 @@ export function TypeRaidGame() {
     setScore((current) => Math.max(0, current - 20));
     setHp((current) => {
       const next = Math.max(0, current - typoDamage);
+      if (next === 0 && owned.includes("phoenix") && !phoenixUsed) {
+        setPhoenixUsed(true);
+        flash("player", "REVIVED 35");
+        return Math.min(maxHp, 35);
+      }
       if (next === 0) finishRun("defeat", score);
       return next;
     });
-    flash("player", `-${typoDamage}`);
+    if (!(owned.includes("phoenix") && !phoenixUsed && hp <= typoDamage)) {
+      flash("player", `-${typoDamage}`);
+    }
     if (settings.sound) playSound("error");
-  }, [finishRun, flash, score, settings.sound, typoDamage]);
+  }, [finishRun, flash, hp, maxHp, owned, phoenixUsed, score, settings.sound, typoDamage]);
 
   const handleKey = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
@@ -299,24 +385,34 @@ export function TypeRaidGame() {
         const incoming = Math.max(1, enemy.damage - armor);
         setHp((currentHp) => {
           const nextHp = Math.max(0, currentHp - incoming);
+          if (nextHp === 0 && owned.includes("phoenix") && !phoenixUsed) {
+            setPhoenixUsed(true);
+            flash("player", "REVIVED 35");
+            return Math.min(maxHp, 35);
+          }
           if (nextHp === 0) finishRun("defeat", score);
           return nextHp;
         });
         setCombo(0);
-        flash("player", `-${incoming}`);
+        if (!(owned.includes("phoenix") && !phoenixUsed && hp <= incoming)) {
+          flash("player", `-${incoming}`);
+        }
         if (settings.sound) playSound("error");
         return enemy.attackMs + attackBonus;
       });
     }, 100);
     return () => window.clearInterval(timer);
-  }, [armor, attackBonus, enemy.attackMs, enemy.damage, finishRun, flash, phase, score, settings.sound]);
+  }, [armor, attackBonus, enemy.attackMs, enemy.damage, finishRun, flash, hp, maxHp, owned, phase, phoenixUsed, score, settings.sound]);
 
   useEffect(() => {
     if (phase === "battle") focusInput();
   }, [focusInput, phase]);
 
   const attackPercent = clamp((attackLeft / (enemy.attackMs + attackBonus)) * 100, 0, 100);
-  const nextWordDamage = 10 + bonusDamage + Math.floor((combo + 1) / 3) * 2 * comboScale;
+  const nextEcho = owned.includes("echo") && (wordsTyped + 1) % 4 === 0;
+  const nextExecute = owned.includes("execute") && enemyHp <= enemy.hp * 0.3;
+  const nextWordMultiplier = (nextEcho ? 2 : 1) * (nextExecute ? 2 : 1);
+  const nextWordDamage = (10 + bonusDamage + rageDamage + Math.floor((combo + 1) / 3) * 2 * comboScale) * nextWordMultiplier;
   const runStats = useMemo(() => [
     { label: "Score", value: score.toLocaleString() },
     { label: "Combo", value: `${combo}×` },
@@ -444,7 +540,12 @@ export function TypeRaidGame() {
                 <HealthBar value={hp} max={maxHp} color={hp < maxHp * 0.3 ? "#ff5c7a" : "#8b70ff"} label="Your health — do not let this reach 0" />
 
                 <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
-                  <span className="rounded-full border border-[#9b7cff]/20 bg-[#9b7cff]/10 px-3 py-1 text-[10px] font-semibold text-[#b6a5ff]">Complete word → deal {nextWordDamage} damage</span>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <span className="rounded-full border border-[#9b7cff]/20 bg-[#9b7cff]/10 px-3 py-1 text-[10px] font-semibold text-[#b6a5ff]">Complete word → deal {nextWordDamage} damage</span>
+                    {nextEcho ? <span className="rounded-full border border-[#b77cff]/25 bg-[#b77cff]/10 px-3 py-1 text-[10px] font-semibold text-[#c99aff]">Arcane Echo ready · 2×</span> : null}
+                    {nextExecute ? <span className="rounded-full border border-[#ff5c7a]/25 bg-[#ff5c7a]/10 px-3 py-1 text-[10px] font-semibold text-[#ff8aa0]">Execute active · 2×</span> : null}
+                    {rageDamage > 0 ? <span className="rounded-full border border-[#ffb84d]/25 bg-[#ffb84d]/10 px-3 py-1 text-[10px] font-semibold text-[#ffc66d]">Berserker · +6</span> : null}
+                  </div>
                   <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/38">Type this word now</p>
                   <div className="mt-4 min-h-16 break-all font-mono text-[clamp(2.6rem,7vw,5rem)] font-bold leading-none tracking-[-0.055em]">
                     <span className="text-[#a88fff]">{target.slice(0, typed.length)}</span>
@@ -472,7 +573,13 @@ export function TypeRaidGame() {
               <div className="mx-auto mt-5 flex max-w-5xl flex-wrap justify-center gap-2">
                 {owned.map((id) => {
                   const upgrade = UPGRADES.find((item) => item.id === id)!;
-                  return <span key={id} title={upgrade.description} className="rounded-full border border-white/[.07] bg-white/[.03] px-3 py-1 text-[10px] text-white/40"><span className="mr-1.5 text-[#a78fff]">{upgrade.symbol}</span>{upgrade.name}</span>;
+                  const rarity = RARITY_META[upgrade.rarity];
+                  const spent = id === "phoenix" && phoenixUsed;
+                  return (
+                    <span key={id} title={upgrade.description} className="rounded-full border px-3 py-1 text-[10px]" style={{ borderColor: `${rarity.color}35`, background: rarity.soft, color: spent ? "rgba(255,255,255,.28)" : rarity.color }}>
+                      <span className="mr-1.5">{upgrade.symbol}</span>{upgrade.name}{spent ? " · spent" : ""}
+                    </span>
+                  );
                 })}
               </div>
             ) : null}
@@ -550,19 +657,30 @@ export function TypeRaidGame() {
             <section className="w-full max-w-4xl py-8 text-center">
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#64dca9]">Room cleared</p>
               <h2 className="mt-2 text-4xl font-bold tracking-[-0.05em] sm:text-5xl">Choose your advantage.</h2>
-              <p className="mt-3 text-sm text-white/38">You recover 14 health after choosing. Pick carefully—the void gets faster.</p>
+              <p className="mt-3 text-sm text-white/38">You recover 14 health after choosing. Later rooms roll better rarities; boss prep guarantees an Epic attack option.</p>
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                {(Object.keys(RARITY_META) as UpgradeRarity[]).map((rarityId) => {
+                  const rarity = RARITY_META[rarityId];
+                  return <span key={rarityId} className="rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[.12em]" style={{ color: rarity.color, borderColor: `${rarity.color}35`, background: rarity.soft }}>{rarity.label}</span>;
+                })}
+              </div>
               <div className="mt-9 grid gap-3 md:grid-cols-3">
-                {rewards.map((upgrade, index) => (
-                  <button key={upgrade.id} type="button" onClick={() => chooseUpgrade(upgrade)} className="group rounded-2xl border border-white/[.09] bg-white/[.035] p-6 text-left transition duration-200 hover:-translate-y-1 hover:border-[#9d83ff]/55 hover:bg-[#9d83ff]/10">
+                {rewards.map((upgrade, index) => {
+                  const rarity = RARITY_META[upgrade.rarity];
+                  return (
+                  <button key={upgrade.id} type="button" onClick={() => chooseUpgrade(upgrade)} className="group relative overflow-hidden rounded-2xl border p-6 text-left transition duration-200 hover:-translate-y-1" style={{ borderColor: `${rarity.color}42`, background: `linear-gradient(145deg, ${rarity.soft}, rgba(255,255,255,.025))`, boxShadow: upgrade.rarity === "legendary" ? `0 20px 60px -35px ${rarity.color}` : undefined }}>
+                    <div aria-hidden className="absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${rarity.color}, transparent)` }} />
                     <div className="flex items-start justify-between">
-                      <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#9d83ff]/12 font-mono text-xl font-bold text-[#ad99ff]">{upgrade.symbol}</span>
+                      <span className="grid h-12 w-12 place-items-center rounded-2xl font-mono text-xl font-bold" style={{ color: rarity.color, background: rarity.soft }}>{upgrade.symbol}</span>
                       <span className="font-mono text-[10px] text-white/20">0{index + 1}</span>
                     </div>
-                    <h3 className="mt-8 text-lg font-semibold">{upgrade.name}</h3>
+                    <p className="mt-7 text-[9px] font-bold uppercase tracking-[.16em]" style={{ color: rarity.color }}>{rarity.label} · {upgrade.kind}</p>
+                    <h3 className="mt-1.5 text-lg font-semibold">{upgrade.name}</h3>
                     <p className="mt-2 text-xs leading-5 text-white/42">{upgrade.description}</p>
-                    <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#a58eff] opacity-0 transition-opacity group-hover:opacity-100">Take upgrade →</p>
+                    <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.14em] opacity-60 transition-opacity group-hover:opacity-100" style={{ color: rarity.color }}>Take upgrade →</p>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </section>
           </div>
