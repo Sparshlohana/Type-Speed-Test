@@ -13,6 +13,12 @@ const VISIBLE_LINES = 3;
 /** Idle gap after which the caret starts blinking again. */
 const BLINK_DELAY_MS = 800;
 
+function hasCommandModifier(event: KeyboardEvent | React.KeyboardEvent): boolean {
+  // AltGr reports as Ctrl+Alt on several layouts but still produces printable text.
+  const altGraph = event.getModifierState("AltGraph");
+  return event.metaKey || (!altGraph && (event.ctrlKey || event.altKey));
+}
+
 type Props = {
   state: TestState;
   caretStyle: CaretStyle;
@@ -36,7 +42,7 @@ export function TypingArea({
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
-  const keyHandledRef = useRef(false);
+  const suppressBeforeInputRef = useRef(false);
   const idleTimerRef = useRef<number | null>(null);
 
   const [focused, setFocused] = useState(false);
@@ -52,6 +58,15 @@ export function TypingArea({
     setIsTyping(true);
     if (idleTimerRef.current !== null) window.clearTimeout(idleTimerRef.current);
     idleTimerRef.current = window.setTimeout(() => setIsTyping(false), BLINK_DELAY_MS);
+  }, []);
+
+  const suppressMatchingBeforeInput = useCallback(() => {
+    suppressBeforeInputRef.current = true;
+    // preventDefault() can stop beforeinput entirely. Never let its suppression
+    // flag leak into a later dead-key, composition, or AltGr character.
+    window.setTimeout(() => {
+      suppressBeforeInputRef.current = false;
+    }, 0);
   }, []);
 
   const ghostStep = ghost?.status === "ready"
@@ -81,7 +96,7 @@ export function TypingArea({
   useEffect(() => {
     if (focused) return;
     const onWindowKey = (event: KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (hasCommandModifier(event)) return;
       if (event.key.length === 1 || event.key === "Backspace") focus();
     };
     window.addEventListener("keydown", onWindowKey);
@@ -168,18 +183,18 @@ export function TypingArea({
       const wholeWord = event.ctrlKey || event.altKey;
       if (event.key === "Backspace") {
         event.preventDefault();
-        keyHandledRef.current = true;
+        suppressMatchingBeforeInput();
         onBackspace(wholeWord);
         markTyping();
         return;
       }
 
       // Let genuine browser shortcuts through untouched.
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (hasCommandModifier(event)) return;
 
       if (event.key === " ") {
         event.preventDefault();
-        keyHandledRef.current = true;
+        suppressMatchingBeforeInput();
         onSpace();
         markTyping();
         return;
@@ -187,12 +202,12 @@ export function TypingArea({
 
       if (event.key.length === 1) {
         event.preventDefault();
-        keyHandledRef.current = true;
+        suppressMatchingBeforeInput();
         onChar(event.key);
         markTyping();
       }
     },
-    [onBackspace, onChar, onRestart, onSpace, markTyping],
+    [onBackspace, onChar, onRestart, onSpace, markTyping, suppressMatchingBeforeInput],
   );
 
   // Mobile keyboards and IMEs report `Unidentified` in keydown, so fall back to beforeinput.
@@ -202,8 +217,8 @@ export function TypingArea({
 
     const onBeforeInput = (event: Event) => {
       const inputEvent = event as InputEvent;
-      if (keyHandledRef.current) {
-        keyHandledRef.current = false;
+      if (suppressBeforeInputRef.current) {
+        suppressBeforeInputRef.current = false;
         event.preventDefault();
         return;
       }
