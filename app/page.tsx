@@ -9,11 +9,11 @@ import { DEFAULT_MODE, modeKey, type Mode } from "@/lib/engine";
 /** Holds the layout while the real test waits for the client. */
 function TestSkeleton() {
   return (
-    <div aria-hidden className="flex flex-col gap-10">
-      <div className="flex justify-center">
-        <div className="h-11 w-full max-w-xl rounded-xl border border-border bg-surface" />
+    <div aria-hidden className="flex flex-col gap-6">
+      <div className="flex min-h-14 flex-col items-center justify-center gap-2">
+        <div className="h-11 w-full max-w-4xl rounded-xl border border-border bg-surface" />
+        <div className="h-10 w-72 rounded-xl border border-border bg-surface" />
       </div>
-      <div className="h-14" />
       <div className="typing-text flex flex-col gap-2 opacity-40">
         <span className="h-[1lh] w-full rounded bg-surface" />
         <span className="h-[1lh] w-11/12 rounded bg-surface" />

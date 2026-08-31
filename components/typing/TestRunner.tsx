@@ -60,14 +60,18 @@ export function TestRunner({
   }
 
   return (
-    <div className="fade-in flex flex-col gap-10">
-      {onModeChange ? (
-        <div className="flex justify-center">
-          <TestConfigBar mode={mode} onChange={onModeChange} dimmed={state.status === "running"} />
-        </div>
-      ) : null}
+    <div className="fade-in flex flex-col gap-6">
+      <div className="grid min-h-14 items-center">
+        {onModeChange ? (
+          <div className="col-start-1 row-start-1 flex justify-center">
+            <TestConfigBar mode={mode} onChange={onModeChange} dimmed={state.status === "running"} />
+          </div>
+        ) : null}
 
-      <LiveStats live={live} visible={state.status === "running"} />
+        <div className="col-start-1 row-start-1">
+          <LiveStats live={live} visible={state.status === "running"} />
+        </div>
+      </div>
 
       <TypingArea
         state={state}

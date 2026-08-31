@@ -70,8 +70,10 @@ export function TestConfigBar({
 
   return (
     <div
+      aria-hidden={dimmed}
+      inert={dimmed}
       className="flex max-w-full flex-col items-center gap-2 transition-opacity duration-300 ease-[var(--ease)]"
-      style={{ opacity: dimmed ? 0.25 : 1 }}
+      style={{ opacity: dimmed ? 0 : 1 }}
     >
       <div className="no-scrollbar flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-border bg-surface p-1.5">
         {TIME_PRESETS.map((seconds) => (
