@@ -109,7 +109,7 @@ export function ResultsPanel({
 
   return (
     <section className="w-full">
-      {personalBests.length > 0 ? <Confetti /> : null}
+      {personalBests.length > 0 ? <Confetti label={bestLabels(personalBests)} /> : null}
       <div className="rise-in flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-sub">

@@ -11,10 +11,10 @@ const QUOTE_PRESETS: QuoteLength[] = ["short", "medium", "long"];
 
 const MIN_CUSTOM_SECONDS = 5;
 const MAX_CUSTOM_SECONDS = 600;
-const DIFFICULTIES: { value: Difficulty; label: string; caption: string; description: string }[] = [
-  { value: "easy", label: "Easy", caption: "short words", description: "Short, common words" },
-  { value: "normal", label: "Normal", caption: "balanced", description: "Balanced vocabulary" },
-  { value: "hard", label: "Hard", caption: "Caps · signs · 123", description: "Long words, capitals, punctuation, and numbers" },
+const DIFFICULTIES: { value: Difficulty; label: string; dot: string; description: string }[] = [
+  { value: "easy", label: "Easy", dot: "#22c55e", description: "Short, common words" },
+  { value: "normal", label: "Normal", dot: "var(--accent)", description: "Balanced vocabulary" },
+  { value: "hard", label: "Hard", dot: "var(--error)", description: "Long words, capitals, punctuation, and numbers" },
 ];
 
 function Pill({
@@ -149,25 +149,32 @@ export function TestConfigBar({
         <div
           role="group"
           aria-label="Typing difficulty"
-          className="grid w-full max-w-md grid-cols-3 gap-1 rounded-xl border border-border bg-surface p-1"
+          className="inline-flex max-w-full items-center gap-1 rounded-xl border border-border bg-surface p-1 shadow-[0_8px_24px_-20px_rgba(0,0,0,0.8)]"
         >
+          <span className="px-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-sub">
+            Level
+          </span>
+          <span aria-hidden className="h-5 w-px bg-border" />
           {DIFFICULTIES.map((option) => (
             <button
               key={option.value}
               type="button"
               aria-pressed={difficulty === option.value}
+              aria-label={`${option.label}: ${option.description}`}
               title={option.description}
               onClick={() => onChange({ ...mode, difficulty: option.value })}
-              className={`rounded-lg border px-3 py-2 text-center transition-all duration-200 ease-[var(--ease)] ${
+              className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all duration-200 ease-[var(--ease)] ${
                 difficulty === option.value
-                  ? "border-[color-mix(in_srgb,var(--accent)_35%,transparent)] bg-accent-soft shadow-[0_4px_14px_-10px_var(--accent)]"
-                  : "border-transparent hover:bg-surface-hover"
+                  ? "border-border bg-bg text-text shadow-[0_2px_8px_-5px_rgba(0,0,0,0.9)]"
+                  : "border-transparent text-sub hover:bg-surface-hover hover:text-text"
               }`}
             >
-              <span className={`block text-xs font-semibold ${difficulty === option.value ? "text-accent" : "text-text"}`}>
-                {option.label}
-              </span>
-              <span className="mt-0.5 block truncate text-[10px] text-sub">{option.caption}</span>
+              <span
+                aria-hidden
+                className={`h-1.5 w-1.5 rounded-full transition-transform ${difficulty === option.value ? "scale-125" : "opacity-55"}`}
+                style={{ background: option.dot }}
+              />
+              {option.label}
             </button>
           ))}
         </div>
