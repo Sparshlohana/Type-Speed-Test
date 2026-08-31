@@ -6,6 +6,7 @@
  */
 
 import { EMPTY_CHAR_STATS, type CharStats, type Sample } from "./metrics";
+import { generateDailyWords } from "./daily";
 import {
   generatePracticeWords,
   generateWords,
@@ -20,7 +21,8 @@ export type Mode =
   | { kind: "time"; seconds: number }
   | { kind: "words"; count: number }
   | { kind: "quote"; length: QuoteLength }
-  | { kind: "practice"; count: number; focusChars: string[]; focusWords: string[] };
+  | { kind: "practice"; count: number; focusChars: string[]; focusWords: string[] }
+  | { kind: "daily"; challengeId: string; count: number };
 
 export type Status = "idle" | "running" | "finished";
 
@@ -62,6 +64,8 @@ export function modeKey(mode: Mode): string {
       return `quote:${mode.length}`;
     case "practice":
       return "practice:adaptive";
+    case "daily":
+      return "daily:challenge";
   }
 }
 
@@ -75,6 +79,8 @@ export function modeLabel(mode: Mode): string {
       return `${mode.length} quote`;
     case "practice":
       return "adaptive practice";
+    case "daily":
+      return "daily challenge";
   }
 }
 
@@ -97,6 +103,8 @@ export function buildTest(mode: Mode): { target: string[]; quote: Quote | null }
         target: generatePracticeWords(mode.count, mode.focusChars, mode.focusWords),
         quote: null,
       };
+    case "daily":
+      return { target: generateDailyWords(mode.challengeId, mode.count), quote: null };
   }
 }
 

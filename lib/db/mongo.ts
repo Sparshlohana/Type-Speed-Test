@@ -25,6 +25,21 @@ export type ResultDoc = {
   weaknesses?: WeaknessSummary;
 };
 
+export type DailyChallengeDoc = {
+  _id: ObjectId;
+  challengeId: string;
+  userId: string;
+  clientId: string;
+  username: string;
+  image: string | null;
+  wpm: number;
+  accuracy: number;
+  consistency: number;
+  durationMs: number;
+  attempts: number;
+  updatedAt: number;
+};
+
 declare global {
   var typeflowMongoClient: MongoClient | undefined;
 }
@@ -45,7 +60,13 @@ export async function getDb(): Promise<Db> {
   return getClient().db(process.env.MONGODB_DB || "typeflow");
 }
 
-export async function collections(): Promise<{ results: Collection<ResultDoc> }> {
+export async function collections(): Promise<{
+  results: Collection<ResultDoc>;
+  dailyChallengeResults: Collection<DailyChallengeDoc>;
+}> {
   const db = await getDb();
-  return { results: db.collection<ResultDoc>("results") };
+  return {
+    results: db.collection<ResultDoc>("results"),
+    dailyChallengeResults: db.collection<DailyChallengeDoc>("daily_challenge_results"),
+  };
 }

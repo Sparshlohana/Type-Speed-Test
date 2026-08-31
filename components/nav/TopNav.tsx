@@ -10,6 +10,7 @@ import { initialsOf } from "@/lib/format";
 const LINKS = [
   { href: "/", label: "Test", mobileLabel: "Test" },
   { href: "/practice", label: "Practice", mobileLabel: "Practice" },
+  { href: "/daily", label: "Daily", mobileLabel: "Daily" },
   { href: "/leaderboard", label: "Leaderboard", mobileLabel: "Ranks" },
   { href: "/stats", label: "Stats", mobileLabel: "Stats" },
   { href: "/settings", label: "Settings", mobileLabel: "Settings" },

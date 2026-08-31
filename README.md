@@ -37,6 +37,8 @@ Notable choices:
 - **Modes**: timed (15s / 30s / 60s / custom), fixed word counts, and quotes.
 - **Adaptive practice**: records mistyped character pairs and problem words, then builds
   targeted 50-word sessions from the latest results.
+- **Daily challenge**: one deterministic 50-word test shared by everyone, with a best-attempt
+  leaderboard that resets at midnight IST.
 - **Shortcuts**: `Tab` restarts, `Esc` unfocuses, typing anything starts the test.
 
 The leaderboard ranks each signed-in user's best MongoDB result for the selected mode.

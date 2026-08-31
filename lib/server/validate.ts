@@ -1,10 +1,11 @@
 import "server-only";
 
 import { modeKey, type Mode } from "@/lib/engine";
+import { DAILY_CHALLENGE_ID_PATTERN, DAILY_CHALLENGE_WORDS } from "@/lib/daily";
 import type { CharStats, Sample } from "@/lib/metrics";
 import type { StoredResult } from "@/lib/storage";
 
-const MODE_KEY_PATTERN = /^(time|words|quote|practice):[a-z0-9]+$/;
+const MODE_KEY_PATTERN = /^(time|words|quote|practice|daily):[a-z0-9]+$/;
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 
 type ValidationResult =
@@ -32,6 +33,13 @@ function validMode(value: unknown): value is Mode {
       Array.isArray(mode.focusWords) &&
       mode.focusWords.length <= 20 &&
       mode.focusWords.every((word) => typeof word === "string" && word.length <= 64)
+    );
+  }
+  if (mode.kind === "daily") {
+    return (
+      typeof mode.challengeId === "string" &&
+      DAILY_CHALLENGE_ID_PATTERN.test(mode.challengeId) &&
+      mode.count === DAILY_CHALLENGE_WORDS
     );
   }
   return false;

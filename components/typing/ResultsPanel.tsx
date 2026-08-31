@@ -17,6 +17,7 @@ function buildShareText(finished: FinishedResult): string {
   const { result } = finished;
   return [
     `TypeFlow — ${modeLabel(result.mode)}`,
+    result.mode.kind === "daily" ? `Challenge ${result.mode.challengeId}` : null,
     `${Math.round(result.wpm)} WPM · ${round(result.accuracy, 1)}% accuracy · ${Math.round(result.consistency)}% consistency`,
     finished.isPersonalBest ? "New personal best." : null,
   ]
@@ -73,17 +74,21 @@ export function ResultsPanel({
 
   const share = useCallback(async () => {
     const text = buildShareText(finished);
+    const url =
+      result.mode.kind === "daily" && typeof window !== "undefined"
+        ? `${window.location.origin}/daily`
+        : undefined;
     try {
       if (typeof navigator !== "undefined" && navigator.share) {
-        await navigator.share({ title: "TypeFlow result", text });
+        await navigator.share({ title: "TypeFlow result", text, url });
         return;
       }
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(url ? `${text}\n${url}` : text);
       setToast("Result copied to clipboard");
     } catch {
       setToast("Couldn't share — copy it manually");
     }
-  }, [finished]);
+  }, [finished, result.mode]);
 
   const delta = previousBest === null ? null : result.wpm - previousBest;
   const typed = totalTypedChars(result.chars);
