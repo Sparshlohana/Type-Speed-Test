@@ -6,12 +6,24 @@ import { LineChart, type Marker, type Series } from "@/components/charts/LineCha
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { Button } from "@/components/ui/Button";
 import { StatTile } from "@/components/ui/Card";
+import { Confetti } from "@/components/ui/Confetti";
 import { Toast } from "@/components/ui/Toast";
-import type { FinishedResult } from "@/hooks/useTypingTest";
+import type { FinishedResult, PersonalBestMetric } from "@/hooks/useTypingTest";
 import { modeLabel } from "@/lib/engine";
 import { formatDuration, round } from "@/lib/format";
 import { totalTypedChars } from "@/lib/metrics";
 import type { Quote } from "@/lib/words";
+
+const BEST_LABELS: Record<PersonalBestMetric, string> = {
+  wpm: "WPM",
+  raw: "raw WPM",
+  accuracy: "accuracy",
+  consistency: "consistency",
+};
+
+function bestLabels(metrics: readonly PersonalBestMetric[]): string {
+  return metrics.map((metric) => BEST_LABELS[metric]).join(" · ");
+}
 
 function buildShareText(finished: FinishedResult): string {
   const { result } = finished;
@@ -19,7 +31,9 @@ function buildShareText(finished: FinishedResult): string {
     `TypeFlow — ${modeLabel(result.mode)}`,
     result.mode.kind === "daily" ? `Challenge ${result.mode.challengeId}` : null,
     `${Math.round(result.wpm)} WPM · ${round(result.accuracy, 1)}% accuracy · ${Math.round(result.consistency)}% consistency`,
-    finished.isPersonalBest ? "New personal best." : null,
+    finished.personalBests.length > 0
+      ? `New records: ${bestLabels(finished.personalBests)}.`
+      : null,
   ]
     .filter(Boolean)
     .join("\n");
@@ -37,7 +51,7 @@ export function ResultsPanel({
   onNewTest: () => void;
 }) {
   const [toast, setToast] = useState<string | null>(null);
-  const { result, previousBest, isPersonalBest } = finished;
+  const { result, previousBest, personalBests } = finished;
 
   const series = useMemo<Series[]>(
     () => [
@@ -95,6 +109,7 @@ export function ResultsPanel({
 
   return (
     <section className="w-full">
+      {personalBests.length > 0 ? <Confetti /> : null}
       <div className="rise-in flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-sub">
@@ -116,9 +131,9 @@ export function ResultsPanel({
               <AnimatedNumber value={result.accuracy} decimals={1} duration={900} suffix="%" />
             </p>
           </div>
-          {isPersonalBest ? (
+          {personalBests.length > 0 ? (
             <span className="rounded-full bg-accent-soft px-3 py-1 text-xs font-medium text-accent ring-1 ring-[color-mix(in_srgb,var(--accent)_40%,transparent)]">
-              New personal best
+              New records: {bestLabels(personalBests)}
             </span>
           ) : delta !== null ? (
             <span className="rounded-full bg-surface px-3 py-1 text-xs text-sub">

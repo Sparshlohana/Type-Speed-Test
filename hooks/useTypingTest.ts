@@ -33,7 +33,10 @@ export type FinishedResult = {
   result: StoredResult;
   previousBest: number | null;
   isPersonalBest: boolean;
+  personalBests: PersonalBestMetric[];
 };
+
+export type PersonalBestMetric = "wpm" | "raw" | "accuracy" | "consistency";
 
 export type LiveStats = {
   wpm: number;
@@ -123,7 +126,22 @@ export function useTypingTest({ mode, soundEnabled, onFinished }: Options) {
         weaknesses: summarizeWeaknesses(snapshot.keyMistakes, snapshot.wordMistakes),
       };
 
-      const previous = personalBest(resultsStore.get().results, mode);
+      const previousResults = resultsStore
+        .get()
+        .results.filter((item) => item.modeKey === result.modeKey);
+      const previous = personalBest(previousResults, mode);
+      const personalBests: PersonalBestMetric[] = [
+        ["wpm", result.wpm],
+        ["raw", result.raw],
+        ["accuracy", result.accuracy],
+        ["consistency", result.consistency],
+      ].flatMap(([metric, value]) => {
+        const key = metric as PersonalBestMetric;
+        const previousHigh = previousResults.length > 0
+          ? Math.max(...previousResults.map((item) => item[key]))
+          : null;
+        return previousHigh === null || (value as number) > previousHigh ? [key] : [];
+      });
       resultsStore.add(result);
 
       samplesRef.current = finalSamples;
@@ -133,6 +151,7 @@ export function useTypingTest({ mode, soundEnabled, onFinished }: Options) {
         result,
         previousBest: previous ? previous.wpm : null,
         isPersonalBest: !previous || result.wpm > previous.wpm,
+        personalBests,
       };
       setFinished(completed);
       onFinished?.(completed);

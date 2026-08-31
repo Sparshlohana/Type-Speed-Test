@@ -163,6 +163,18 @@ body {
   to { stroke-dashoffset: 0; }
 }
 
+@keyframes confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -8vh, 0) rotate(0deg);
+  }
+  10% { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--confetti-drift), 105vh, 0) rotate(var(--confetti-spin));
+  }
+}
+
 .caret-blink {
   animation: caret-blink 1.05s steps(1, end) infinite;
 }
@@ -178,6 +190,17 @@ body {
 .draw-line {
   stroke-dasharray: var(--path-length, 1000);
   animation: draw-line 900ms var(--ease) both;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -12px;
+  left: var(--confetti-left);
+  width: 8px;
+  height: 14px;
+  background: var(--confetti-color);
+  animation: confetti-fall var(--confetti-duration) var(--ease) var(--confetti-delay) both;
+  will-change: transform, opacity;
 }
 
 @media (prefers-reduced-motion: reduce) {
