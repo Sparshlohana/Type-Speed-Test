@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/", label: "Test", mobileLabel: "Test" },
   { href: "/practice", label: "Practice", mobileLabel: "Practice" },
   { href: "/daily", label: "Daily", mobileLabel: "Daily" },
+  { href: "/games", label: "Games", mobileLabel: "Games" },
   { href: "/leaderboard", label: "Leaderboard", mobileLabel: "Ranks" },
   { href: "/stats", label: "Stats", mobileLabel: "Stats" },
   { href: "/settings", label: "Settings", mobileLabel: "Settings" },
@@ -97,7 +98,7 @@ export function TopNav() {
       {/* Small screens get the sections as a bottom bar instead. */}
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-bg/90 backdrop-blur-md sm:hidden"
+        className="fixed inset-x-0 bottom-0 z-30 flex overflow-x-auto border-t border-border bg-bg/90 backdrop-blur-md sm:hidden"
       >
         {LINKS.map((link) => {
           const active = isActive(pathname, link.href);
@@ -106,7 +107,7 @@ export function TopNav() {
               key={link.href}
               href={link.href}
               aria-current={active ? "page" : undefined}
-              className={`flex-1 py-3 text-center text-xs font-medium transition-colors duration-200 ease-[var(--ease)] ${
+              className={`min-w-[3.25rem] flex-1 py-3 text-center text-[11px] font-medium transition-colors duration-200 ease-[var(--ease)] ${
                 active ? "text-accent" : "text-sub"
               }`}
             >

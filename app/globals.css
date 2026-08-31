@@ -213,6 +213,78 @@ body {
   }
 }
 
+/* ---------------------------------------------------------------------------
+   TypeRaid arcade
+--------------------------------------------------------------------------- */
+
+.typeraid-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, black, transparent 85%);
+}
+
+.typeraid-enter {
+  animation: typeraid-enter 650ms var(--ease) both;
+}
+
+.typeraid-enemy {
+  animation: typeraid-float 3.8s ease-in-out infinite;
+}
+
+.typeraid-enemy-hit {
+  animation: typeraid-hit 240ms ease-out;
+}
+
+.typeraid-player-hit {
+  animation: typeraid-shake 240ms ease-out;
+  border-color: rgba(255, 92, 122, 0.42);
+}
+
+.typeraid-float {
+  animation: typeraid-damage 300ms ease-out both;
+}
+
+@keyframes typeraid-enter {
+  from { opacity: 0; transform: translateY(18px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes typeraid-float {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-9px) rotate(1deg); }
+}
+
+@keyframes typeraid-hit {
+  0% { transform: translateX(0) scale(1); filter: brightness(1); }
+  35% { transform: translateX(9px) scale(0.94); filter: brightness(2); }
+  100% { transform: translateX(0) scale(1); filter: brightness(1); }
+}
+
+@keyframes typeraid-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-7px); }
+  55% { transform: translateX(6px); }
+  78% { transform: translateX(-3px); }
+}
+
+@keyframes typeraid-damage {
+  from { opacity: 0; transform: translateY(10px) scale(0.8); }
+  30% { opacity: 1; }
+  to { opacity: 0; transform: translateY(-22px) scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typeraid-enter,
+  .typeraid-enemy,
+  .typeraid-enemy-hit,
+  .typeraid-player-hit,
+  .typeraid-float {
+    animation: none;
+  }
+}
+
 /* Hide the scrollbar on horizontally scrollable pill rows without losing the scroll. */
 .no-scrollbar {
   scrollbar-width: none;
