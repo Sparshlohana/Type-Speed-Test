@@ -42,9 +42,9 @@ export function Confetti({ label }: { label: string }) {
         className="pointer-events-none fixed left-1/2 top-20 z-[51] -translate-x-1/2 rounded-xl border border-[color-mix(in_srgb,var(--accent)_35%,var(--border))] bg-bg/95 px-5 py-3 text-center shadow-[var(--shadow)] backdrop-blur-md"
       >
         <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-accent">
-          New personal best
+          Test complete
         </p>
-        <p className="mt-1 whitespace-nowrap text-sm font-semibold text-text">{label}</p>
+        <p className="mt-1 whitespace-nowrap text-sm font-semibold text-text">{label} finished</p>
       </div>
       <div aria-hidden className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
         {PIECES.map((piece) => (
