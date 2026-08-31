@@ -8,10 +8,11 @@ import { signIn, signOut, useSession } from "@/lib/auth-client";
 import { initialsOf } from "@/lib/format";
 
 const LINKS = [
-  { href: "/", label: "Test" },
-  { href: "/leaderboard", label: "Leaderboard" },
-  { href: "/stats", label: "Stats" },
-  { href: "/settings", label: "Settings" },
+  { href: "/", label: "Test", mobileLabel: "Test" },
+  { href: "/practice", label: "Practice", mobileLabel: "Practice" },
+  { href: "/leaderboard", label: "Leaderboard", mobileLabel: "Ranks" },
+  { href: "/stats", label: "Stats", mobileLabel: "Stats" },
+  { href: "/settings", label: "Settings", mobileLabel: "Settings" },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {
@@ -108,7 +109,7 @@ export function TopNav() {
                 active ? "text-accent" : "text-sub"
               }`}
             >
-              {link.label}
+              {link.mobileLabel}
             </Link>
           );
         })}

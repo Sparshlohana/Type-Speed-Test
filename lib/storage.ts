@@ -7,6 +7,7 @@
 
 import { modeKey, type Mode } from "./engine";
 import type { CharStats, Sample } from "./metrics";
+import type { WeaknessSummary } from "./weakness";
 
 export const STORAGE_KEYS = {
   results: "typeflow.results",
@@ -32,6 +33,8 @@ export type StoredResult = {
   keystrokes: number;
   errors: number;
   samples: Sample[];
+  /** Optional so results saved before adaptive analytics remain readable. */
+  weaknesses?: WeaknessSummary;
 };
 
 export type ThemePreference = "dark" | "light" | "system";

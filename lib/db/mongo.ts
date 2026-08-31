@@ -2,6 +2,7 @@ import { MongoClient, type Collection, type Db, type ObjectId } from "mongodb";
 
 import type { Mode } from "@/lib/engine";
 import type { CharStats, Sample } from "@/lib/metrics";
+import type { WeaknessSummary } from "@/lib/weakness";
 
 export type ResultDoc = {
   _id: ObjectId;
@@ -21,6 +22,7 @@ export type ResultDoc = {
   keystrokes: number;
   errors: number;
   samples: Sample[];
+  weaknesses?: WeaknessSummary;
 };
 
 declare global {

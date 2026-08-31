@@ -19,7 +19,7 @@ export function TestRunner({
   onModeChange,
 }: {
   mode: Mode;
-  onModeChange: (next: Mode) => void;
+  onModeChange?: (next: Mode) => void;
 }) {
   const { settings } = useSettings();
   const { state, live, finished, onChar, onSpace, onBackspace, restart, startNewTest } =
@@ -53,9 +53,11 @@ export function TestRunner({
 
   return (
     <div className="fade-in flex flex-col gap-10">
-      <div className="flex justify-center">
-        <TestConfigBar mode={mode} onChange={onModeChange} dimmed={state.status === "running"} />
-      </div>
+      {onModeChange ? (
+        <div className="flex justify-center">
+          <TestConfigBar mode={mode} onChange={onModeChange} dimmed={state.status === "running"} />
+        </div>
+      ) : null}
 
       <LiveStats live={live} visible={state.status === "running"} />
 

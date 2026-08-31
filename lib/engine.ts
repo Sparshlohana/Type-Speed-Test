@@ -6,12 +6,21 @@
  */
 
 import { EMPTY_CHAR_STATS, type CharStats, type Sample } from "./metrics";
-import { generateWords, quoteToWords, randomQuote, type Quote, type QuoteLength } from "./words";
+import {
+  generatePracticeWords,
+  generateWords,
+  quoteToWords,
+  randomQuote,
+  type Quote,
+  type QuoteLength,
+} from "./words";
+import type { KeyMistake } from "./weakness";
 
 export type Mode =
   | { kind: "time"; seconds: number }
   | { kind: "words"; count: number }
-  | { kind: "quote"; length: QuoteLength };
+  | { kind: "quote"; length: QuoteLength }
+  | { kind: "practice"; count: number; focusChars: string[]; focusWords: string[] };
 
 export type Status = "idle" | "running" | "finished";
 
@@ -29,6 +38,10 @@ export type TestState = {
   keystrokes: number;
   /** Keystrokes that were wrong when they were made. Never decremented. */
   errors: number;
+  /** Wrong printable keys retained even if the user later backspaces. */
+  keyMistakes: KeyMistake[];
+  /** Target words involved in a mistake or committed incorrectly. */
+  wordMistakes: string[];
   /** Attribution for quote mode, so the results screen can credit the source. */
   quote: Quote | null;
 };
@@ -47,6 +60,8 @@ export function modeKey(mode: Mode): string {
       return `words:${mode.count}`;
     case "quote":
       return `quote:${mode.length}`;
+    case "practice":
+      return "practice:adaptive";
   }
 }
 
@@ -58,6 +73,8 @@ export function modeLabel(mode: Mode): string {
       return `${mode.count} words`;
     case "quote":
       return `${mode.length} quote`;
+    case "practice":
+      return "adaptive practice";
   }
 }
 
@@ -75,6 +92,11 @@ export function buildTest(mode: Mode): { target: string[]; quote: Quote | null }
       const quote = randomQuote(mode.length);
       return { target: quoteToWords(quote), quote };
     }
+    case "practice":
+      return {
+        target: generatePracticeWords(mode.count, mode.focusChars, mode.focusWords),
+        quote: null,
+      };
   }
 }
 
@@ -87,6 +109,8 @@ export function createState(target: string[], quote: Quote | null = null): TestS
     startedAt: null,
     keystrokes: 0,
     errors: 0,
+    keyMistakes: [],
+    wordMistakes: [],
     quote,
   };
 }
@@ -131,6 +155,10 @@ export function typeChar(state: TestState, char: string, now: number): TestState
     typed,
     keystrokes: started.keystrokes + 1,
     errors: started.errors + (isCorrect ? 0 : 1),
+    keyMistakes: isCorrect
+      ? started.keyMistakes
+      : [...started.keyMistakes, { expected: targetWord[current.length] ?? "", actual: char }],
+    wordMistakes: isCorrect ? started.wordMistakes : [...started.wordMistakes, targetWord],
   };
 
   // Finishing the final word of a fixed-length test ends it without needing a trailing space.
@@ -161,6 +189,7 @@ export function typeSpace(state: TestState, now: number): TestState {
     wordIndex,
     keystrokes: started.keystrokes + 1,
     errors: started.errors + (wordIsPerfect ? 0 : 1),
+    wordMistakes: wordIsPerfect ? started.wordMistakes : [...started.wordMistakes, targetWord],
   };
 
   return wordIndex >= next.target.length ? { ...next, status: "finished" } : next;

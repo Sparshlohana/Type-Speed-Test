@@ -35,6 +35,8 @@ Notable choices:
   throttled background tab cannot inflate or deflate a score.
 - **Consistency** is `1 - coefficient of variation` over the per-second raw WPM samples.
 - **Modes**: timed (15s / 30s / 60s / custom), fixed word counts, and quotes.
+- **Adaptive practice**: records mistyped character pairs and problem words, then builds
+  targeted 50-word sessions from the latest results.
 - **Shortcuts**: `Tab` restarts, `Esc` unfocuses, typing anything starts the test.
 
 The leaderboard ranks each signed-in user's best MongoDB result for the selected mode.

@@ -1146,6 +1146,44 @@ export function generateWords(count: number): string[] {
   return out;
 }
 
+/**
+ * Build a mixed practice set: mostly words containing weak characters, with
+ * previously missed words deliberately resurfaced and a little general variety.
+ */
+export function generatePracticeWords(
+  count: number,
+  focusChars: readonly string[],
+  focusWords: readonly string[],
+): string[] {
+  const chars = new Set(focusChars.map((char) => char.toLocaleLowerCase()));
+  const missed = [...new Set(
+    focusWords
+      .map((word) => word.trim().toLocaleLowerCase())
+      .filter((word) => word.length > 0 && !/\s/.test(word)),
+  )];
+  const targeted = WORD_BANK
+    .map((word) => ({
+      word,
+      score: [...word].reduce((total, char) => total + (chars.has(char) ? 1 : 0), 0),
+    }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 300)
+    .map((item) => item.word);
+  const focusPool = targeted.length > 0 ? targeted : WORD_BANK;
+  const out: string[] = [];
+
+  for (let index = 0; index < count; index++) {
+    const useMissed = missed.length > 0 && index % 4 === 0;
+    const pool = useMissed ? missed : Math.random() < 0.85 ? focusPool : WORD_BANK;
+    let word = pick(pool);
+    let guard = 0;
+    while (word === out.at(-1) && guard++ < 8) word = pick(pool);
+    out.push(word);
+  }
+  return out;
+}
+
 export function randomQuote(length: QuoteLength): Quote {
   const pool = QUOTES.filter((q) => q.length === length);
   return pick(pool.length > 0 ? pool : QUOTES);

@@ -25,8 +25,8 @@ import {
 import { createResultId, personalBest, type StoredResult } from "@/lib/storage";
 import { resultsStore } from "@/lib/store";
 import { playSound } from "@/lib/sound";
+import { summarizeWeaknesses } from "@/lib/weakness";
 
-/** How often the clock is polled. Elapsed time is always derived, never accumulated. */
 const TICK_MS = 100;
 
 export type FinishedResult = {
@@ -119,6 +119,7 @@ export function useTypingTest({ mode, soundEnabled }: Options) {
         keystrokes: snapshot.keystrokes,
         errors: snapshot.errors,
         samples: finalSamples,
+        weaknesses: summarizeWeaknesses(snapshot.keyMistakes, snapshot.wordMistakes),
       };
 
       const previous = personalBest(resultsStore.get().results, mode);

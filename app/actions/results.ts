@@ -30,6 +30,7 @@ function toDocument(result: StoredResult, user: Awaited<ReturnType<typeof requir
     keystrokes: result.keystrokes,
     errors: result.errors,
     samples: result.samples,
+    weaknesses: result.weaknesses,
   };
 }
 
@@ -48,6 +49,7 @@ function fromDocument(doc: ResultDoc): StoredResult {
     keystrokes: doc.keystrokes,
     errors: doc.errors,
     samples: doc.samples ?? [],
+    weaknesses: doc.weaknesses,
   };
 }
 
