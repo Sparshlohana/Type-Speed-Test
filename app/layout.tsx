@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 
 import { TopNav } from "@/components/nav/TopNav";
+import { DailyChallengePrompt } from "@/components/daily/DailyChallengePrompt";
 import { SettingsProvider } from "@/hooks/useSettings";
 import { ResultsSync } from "@/hooks/useResultsSync";
 import "./globals.css";
@@ -71,6 +72,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SettingsProvider>
           <ResultsSync>
             <TopNav />
+            <DailyChallengePrompt />
             <main className="flex flex-1 flex-col pb-16 sm:pb-0">{children}</main>
           </ResultsSync>
         </SettingsProvider>

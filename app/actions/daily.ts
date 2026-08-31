@@ -16,6 +16,19 @@ export type DailyBoard = {
   yourRank: number | null;
 };
 
+export async function hasCompletedDailyChallenge(challengeId: unknown): Promise<boolean> {
+  if (typeof challengeId !== "string" || !DAILY_CHALLENGE_ID_PATTERN.test(challengeId)) {
+    return false;
+  }
+  const user = await getUser();
+  if (!user) return false;
+  const { dailyChallengeResults } = await collections();
+  return Boolean(await dailyChallengeResults.findOne(
+    { challengeId, userId: user.id },
+    { projection: { _id: 1 } },
+  ));
+}
+
 export async function getDailyLeaderboard(challengeId: unknown): Promise<DailyBoard> {
   if (typeof challengeId !== "string" || !DAILY_CHALLENGE_ID_PATTERN.test(challengeId)) {
     return { entries: [], yourRank: null };

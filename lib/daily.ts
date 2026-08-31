@@ -3,6 +3,8 @@ import { WORD_BANK } from "./words.ts";
 export const DAILY_CHALLENGE_WORDS = 50;
 export const DAILY_CHALLENGE_ID_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 export const DAILY_CHALLENGE_TIME_ZONE = "Asia/Kolkata";
+const DAILY_COMPLETION_PREFIX = "typeflow.daily.completed";
+const DAILY_DISMISSAL_PREFIX = "typeflow.daily.dismissed";
 
 export type DailyChallenge = {
   id: string;
@@ -68,4 +70,40 @@ export function generateDailyWords(challengeId: string, count: number): string[]
     words.push(word);
   }
   return words;
+}
+
+export function hasLocalDailyCompletion(challengeId: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(`${DAILY_COMPLETION_PREFIX}.${challengeId}`) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function markLocalDailyCompletion(challengeId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(`${DAILY_COMPLETION_PREFIX}.${challengeId}`, "1");
+  } catch {
+    // Completion still exists in account storage when local storage is blocked.
+  }
+}
+
+export function wasDailyPromptDismissed(challengeId: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.sessionStorage.getItem(`${DAILY_DISMISSAL_PREFIX}.${challengeId}`) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function dismissDailyPrompt(challengeId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(`${DAILY_DISMISSAL_PREFIX}.${challengeId}`, "1");
+  } catch {
+    // The prompt can safely return on a later navigation if session storage is blocked.
+  }
 }

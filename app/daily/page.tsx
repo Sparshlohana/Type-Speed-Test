@@ -9,7 +9,11 @@ import {
 } from "@/app/actions/daily";
 import { TestRunner } from "@/components/typing/TestRunner";
 import type { FinishedResult } from "@/hooks/useTypingTest";
-import { DAILY_CHALLENGE_TIME_ZONE, dailyChallengeAt } from "@/lib/daily";
+import {
+  DAILY_CHALLENGE_TIME_ZONE,
+  dailyChallengeAt,
+  markLocalDailyCompletion,
+} from "@/lib/daily";
 import type { Mode } from "@/lib/engine";
 import { initialsOf, round } from "@/lib/format";
 
@@ -73,6 +77,7 @@ export default function DailyChallengePage() {
 
   const handleFinished = useCallback(
     (finished: FinishedResult) => {
+      markLocalDailyCompletion(challenge.id);
       setSubmission("Submitting your best attempt…");
       void submitDailyResult(finished.result)
         .then(async (response) => {
@@ -91,7 +96,7 @@ export default function DailyChallengePage() {
           setSubmission("Result saved locally; the daily leaderboard is unavailable.");
         });
     },
-    [refreshBoard],
+    [challenge.id, refreshBoard],
   );
 
   const dateLabel = new Intl.DateTimeFormat(undefined, {
