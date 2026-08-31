@@ -44,3 +44,29 @@ export function Caret({
     />
   );
 }
+
+/** A saved run's position, drawn directly over the character it is currently typing. */
+export function GhostCaret({
+  position,
+  visible,
+}: {
+  position: CaretPosition | null;
+  visible: boolean;
+}) {
+  if (!position || !visible) return null;
+
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute z-[1] rounded-[3px] border border-dashed border-sub/80 bg-sub/10 transition-[left,top,width] duration-100 ease-linear"
+      style={{
+        left: position.left - 2,
+        top: position.top - 1,
+        width: Math.max(position.width + 4, 10),
+        height: position.height + 2,
+      }}
+    >
+      <span className="absolute -right-1 -top-1 h-1.5 w-1.5 rounded-full bg-sub shadow-[0_0_0_2px_var(--bg)]" />
+    </span>
+  );
+}

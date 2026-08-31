@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 
 import { LiveStats } from "./LiveStats";
-import { GhostRace } from "./GhostRace";
 import { ResultsPanel } from "./ResultsPanel";
 import { TestConfigBar } from "./TestConfigBar";
 import { TypingArea } from "./TypingArea";
@@ -70,12 +69,11 @@ export function TestRunner({
 
       <LiveStats live={live} visible={state.status === "running"} />
 
-      <GhostRace race={ghost} typingStatus={state.status} />
-
       <TypingArea
         state={state}
         caretStyle={settings.caretStyle}
         smoothCaret={settings.smoothCaret}
+        ghost={ghost}
         onChar={onChar}
         onSpace={onSpace}
         onBackspace={onBackspace}

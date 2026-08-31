@@ -64,9 +64,7 @@ export type GhostRaceState =
       status: "ready";
       opponent: GhostOpponent;
       resultWpm: number;
-      playerChars: number;
       ghostChars: number;
-      finishChars: number;
       ghostFinished: boolean;
     };
 
@@ -337,17 +335,14 @@ export function useTypingTest({
     if (detailed === undefined) return { status: "loading", opponent: ghostOpponent };
     if (detailed === null) return { status: "unavailable", opponent: ghostOpponent };
 
-    const playerChars = measure(state, elapsedMs).chars.correct;
     return {
       status: "ready",
       opponent: ghostOpponent,
       resultWpm: detailed.wpm,
-      playerChars,
       ghostChars: ghostCorrectCharsAt(detailed, elapsedMs),
-      finishChars: Math.max(1, detailed.chars.correct),
       ghostFinished: elapsedMs >= detailed.durationMs,
     };
-  }, [elapsedMs, ghostEnabled, ghostOpponent, ghostSummary, loadedGhost, state]);
+  }, [elapsedMs, ghostEnabled, ghostOpponent, ghostSummary, loadedGhost]);
 
   return {
     state,

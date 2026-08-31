@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { Caret, type CaretPosition } from "./Caret";
+import { Caret, GhostCaret, type CaretPosition } from "./Caret";
 import { Word } from "./Word";
+import type { GhostRaceState } from "@/hooks/useTypingTest";
 import { typedAt, type TestState } from "@/lib/engine";
 import type { CaretStyle } from "@/lib/storage";
 
@@ -16,6 +17,7 @@ type Props = {
   state: TestState;
   caretStyle: CaretStyle;
   smoothCaret: boolean;
+  ghost: GhostRaceState | null;
   onChar: (char: string) => void;
   onSpace: () => void;
   onBackspace: (wholeWord: boolean) => void;
@@ -26,6 +28,7 @@ export function TypingArea({
   state,
   caretStyle,
   smoothCaret,
+  ghost,
   onChar,
   onSpace,
   onBackspace,
@@ -39,6 +42,7 @@ export function TypingArea({
   const [focused, setFocused] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [caret, setCaret] = useState<CaretPosition | null>(null);
+  const [ghostCaret, setGhostCaret] = useState<CaretPosition | null>(null);
   const [offsetY, setOffsetY] = useState(0);
   const [lineHeight, setLineHeight] = useState(48);
 
@@ -49,6 +53,22 @@ export function TypingArea({
     if (idleTimerRef.current !== null) window.clearTimeout(idleTimerRef.current);
     idleTimerRef.current = window.setTimeout(() => setIsTyping(false), BLINK_DELAY_MS);
   }, []);
+
+  const ghostStep = ghost?.status === "ready"
+    ? Math.max(0, Math.floor(ghost.ghostChars))
+    : null;
+  const ghostPosition = (() => {
+    if (ghostStep === null) return null;
+    let remaining = ghostStep;
+    for (let wordIndex = 0; wordIndex < state.target.length; wordIndex++) {
+      const length = state.target[wordIndex]?.length ?? 0;
+      if (remaining <= length) return { wordIndex, charIndex: remaining };
+      remaining -= length;
+      if (wordIndex < state.target.length - 1) remaining -= 1;
+    }
+    const wordIndex = Math.max(0, state.target.length - 1);
+    return { wordIndex, charIndex: state.target[wordIndex]?.length ?? 0 };
+  })();
 
   useEffect(() => {
     focus();
@@ -68,7 +88,7 @@ export function TypingArea({
     return () => window.removeEventListener("keydown", onWindowKey);
   }, [focused, focus]);
 
-  // Position the caret and keep the active line pinned to row two.
+  // Position both carets and keep the player's active line pinned to row two.
   useLayoutEffect(() => {
     const inner = innerRef.current;
     if (!inner) return;
@@ -102,9 +122,34 @@ export function TypingArea({
       width: reference.offsetWidth || 12,
     });
 
+    const ghostChar = inner.querySelector<HTMLElement>("[data-ghost-char]");
+    const ghostTail = inner.querySelector<HTMLElement>("[data-ghost-tail]");
+    const ghostAnchor = ghostChar ?? ghostTail;
+    if (ghostAnchor) {
+      const isGhostTail = ghostAnchor === ghostTail;
+      let ghostReference = ghostAnchor;
+      if (isGhostTail) {
+        ghostReference = (ghostAnchor.previousElementSibling as HTMLElement | null) ?? ghostAnchor;
+        if (ghostReference.hasAttribute("data-caret-tail")) {
+          ghostReference =
+            (ghostReference.previousElementSibling as HTMLElement | null) ?? ghostAnchor;
+        }
+      }
+      setGhostCaret({
+        left: isGhostTail
+          ? ghostReference.offsetLeft + ghostReference.offsetWidth
+          : ghostAnchor.offsetLeft,
+        top: ghostReference.offsetTop,
+        height: ghostReference.offsetHeight || measuredLineHeight * 0.7,
+        width: isGhostTail ? 2 : ghostAnchor.offsetWidth || 12,
+      });
+    } else {
+      setGhostCaret(null);
+    }
+
     const line = Number.isFinite(measuredLineHeight) ? measuredLineHeight : 48;
     setOffsetY(Math.max(0, top - line));
-  }, [state.typed, state.wordIndex, state.target]);
+  }, [ghostStep, state.typed, state.wordIndex, state.target]);
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -203,6 +248,23 @@ export function TypingArea({
         style={{ caretColor: "transparent" }}
       />
 
+      {ghost ? (
+        <div className="mb-2 flex min-h-4 justify-end text-[10px] font-medium uppercase tracking-[0.12em] text-sub">
+          {ghost.status === "ready" ? (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-sub" />
+              {ghost.opponent === "personal-best" ? "PB ghost" : "Last-attempt ghost"} · {Math.round(ghost.resultWpm)} WPM
+            </span>
+          ) : ghost.status === "empty" ? (
+            <span>Complete this mode once to create a ghost</span>
+          ) : ghost.status === "loading" ? (
+            <span>Loading ghost…</span>
+          ) : (
+            <span>Ghost unavailable</span>
+          )}
+        </div>
+      ) : null}
+
       <div
         className="relative overflow-hidden transition-[filter,opacity] duration-200 ease-[var(--ease)]"
         style={{
@@ -226,12 +288,14 @@ export function TypingArea({
             blinking={!isTyping}
             visible={focused}
           />
+          <GhostCaret position={ghostCaret} visible={ghost?.status === "ready"} />
           {state.target.map((word, index) => (
             <Word
               key={index}
               target={word}
               typed={typedAt(state, index)}
               isActive={index === state.wordIndex}
+              ghostCharIndex={ghostPosition?.wordIndex === index ? ghostPosition.charIndex : undefined}
               flagged={index < state.wordIndex && typedAt(state, index) !== word}
             />
           ))}

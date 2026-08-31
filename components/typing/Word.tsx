@@ -6,6 +6,7 @@ type Props = {
   target: string;
   typed: string;
   isActive: boolean;
+  ghostCharIndex?: number;
   /** Committed word that did not match — gets a soft red underline. */
   flagged: boolean;
 };
@@ -14,7 +15,7 @@ type Props = {
  * One word. Memoised so a keystroke only re-renders the word being typed;
  * a 300-word timed test would otherwise repaint every span on every key.
  */
-function WordComponent({ target, typed, isActive, flagged }: Props) {
+function WordComponent({ target, typed, isActive, ghostCharIndex, flagged }: Props) {
   const chars = target.split("");
   const extras = typed.length > target.length ? typed.slice(target.length).split("") : [];
 
@@ -29,6 +30,7 @@ function WordComponent({ target, typed, isActive, flagged }: Props) {
             key={index}
             className={`char-${state}`}
             data-active-char={isActive && index === typed.length ? "" : undefined}
+            data-ghost-char={ghostCharIndex === index ? "" : undefined}
           >
             {char}
           </span>
@@ -48,6 +50,9 @@ function WordComponent({ target, typed, isActive, flagged }: Props) {
       {/* Caret anchor for when the cursor sits past the last character of the word. */}
       {isActive && typed.length >= target.length + extras.length ? (
         <span data-caret-tail className="inline-block w-0" />
+      ) : null}
+      {ghostCharIndex === target.length ? (
+        <span data-ghost-tail className="inline-block w-0" />
       ) : null}
     </span>
   );
