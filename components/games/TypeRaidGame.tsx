@@ -408,6 +408,16 @@ export function TypeRaidGame() {
     if (phase === "battle") focusInput();
   }, [focusInput, phase]);
 
+  useEffect(() => {
+    const modalOpen = phase === "briefing" || phase === "paused" || phase === "reward" || phase === "victory" || phase === "defeat";
+    if (!modalOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [phase]);
+
   const attackPercent = clamp((attackLeft / (enemy.attackMs + attackBonus)) * 100, 0, 100);
   const nextEcho = owned.includes("echo") && (wordsTyped + 1) % 4 === 0;
   const nextExecute = owned.includes("execute") && enemyHp <= enemy.hp * 0.3;
@@ -421,7 +431,7 @@ export function TypeRaidGame() {
   ], [accuracy, combo, score, wpm]);
 
   return (
-    <div className="typeraid-shell relative min-h-[calc(100vh-4rem)] overflow-hidden bg-[#09070f] text-white">
+    <div className="typeraid-shell relative isolate min-h-[calc(100vh-4rem)] overflow-hidden bg-[#09070f] text-white">
       <div aria-hidden className="typeraid-grid absolute inset-0 opacity-35" />
       <div aria-hidden className="absolute left-1/2 top-[-18rem] h-[38rem] w-[48rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(124,92,255,.22),transparent_68%)]" />
 
@@ -587,7 +597,7 @@ export function TypeRaidGame() {
         )}
 
         {phase === "briefing" ? (
-          <div className="absolute inset-0 z-40 grid place-items-center overflow-y-auto bg-[#09070f]/94 p-4 backdrop-blur-xl sm:p-6">
+          <div className="fixed inset-x-0 bottom-0 top-16 z-20 grid place-items-center overflow-y-auto bg-[#09070f]/94 p-4 pb-20 backdrop-blur-xl sm:p-6">
             <section className="typeraid-enter w-full max-w-4xl overflow-hidden rounded-3xl border border-white/[.1] bg-[#11101a] shadow-[0_40px_120px_-55px_#7c5cff]">
               <div className="grid lg:grid-cols-[.75fr_1.25fr]">
                 <div className="relative hidden min-h-[34rem] overflow-hidden border-r border-white/[.07] bg-[radial-gradient(circle_at_50%_45%,rgba(87,217,163,.18),transparent_46%),linear-gradient(180deg,rgba(255,255,255,.025),transparent)] p-6 lg:flex lg:flex-col">
@@ -643,7 +653,7 @@ export function TypeRaidGame() {
         ) : null}
 
         {phase === "paused" ? (
-          <div className="absolute inset-0 z-30 grid place-items-center bg-[#09070f]/85 p-5 backdrop-blur-md">
+          <div className="fixed inset-x-0 bottom-0 top-16 z-20 grid place-items-center overflow-y-auto bg-[#09070f]/85 p-5 pb-20 backdrop-blur-md sm:pb-5">
             <div className="text-center">
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#9f87ff]">Run suspended</p>
               <h2 className="mt-2 text-4xl font-bold tracking-[-0.05em]">Catch your breath.</h2>
@@ -653,7 +663,7 @@ export function TypeRaidGame() {
         ) : null}
 
         {phase === "reward" ? (
-          <div className="absolute inset-0 z-30 grid place-items-center overflow-y-auto bg-[#09070f]/94 p-5 backdrop-blur-xl">
+          <div className="fixed inset-x-0 bottom-0 top-16 z-20 grid place-items-center overflow-y-auto bg-[#09070f]/94 p-5 pb-20 backdrop-blur-xl sm:pb-5">
             <section className="w-full max-w-4xl py-8 text-center">
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#64dca9]">Room cleared</p>
               <h2 className="mt-2 text-4xl font-bold tracking-[-0.05em] sm:text-5xl">Choose your advantage.</h2>
@@ -687,7 +697,7 @@ export function TypeRaidGame() {
         ) : null}
 
         {phase === "victory" || phase === "defeat" ? (
-          <div className="absolute inset-0 z-40 grid place-items-center overflow-y-auto bg-[#09070f]/94 p-5 backdrop-blur-xl">
+          <div className="fixed inset-x-0 bottom-0 top-16 z-20 grid place-items-center overflow-y-auto bg-[#09070f]/94 p-5 pb-20 backdrop-blur-xl sm:pb-5">
             <section className="w-full max-w-2xl py-8 text-center">
               <div className={`mx-auto grid h-20 w-20 place-items-center rounded-[38%_62%_55%_45%] border ${phase === "victory" ? "border-[#65dca9]/30 bg-[#65dca9]/10 text-[#65dca9]" : "border-[#ff5c7a]/30 bg-[#ff5c7a]/10 text-[#ff718d]"}`}>
                 <span className="font-mono text-3xl font-black">{phase === "victory" ? "V" : "×"}</span>
