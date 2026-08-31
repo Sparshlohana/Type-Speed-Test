@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -7,12 +8,12 @@ import { useSettings } from "@/hooks/useSettings";
 import { playSound } from "@/lib/sound";
 import { generateWords, type Difficulty } from "@/lib/words";
 
-type Phase = "menu" | "battle" | "paused" | "reward" | "victory" | "defeat";
+type Phase = "menu" | "briefing" | "battle" | "paused" | "reward" | "victory" | "defeat";
 
 type Enemy = {
   name: string;
   title: string;
-  glyph: string;
+  sprite: string;
   hp: number;
   damage: number;
   attackMs: number;
@@ -30,10 +31,10 @@ type Upgrade = {
 };
 
 const ENEMIES: readonly Enemy[] = [
-  { name: "Glitchling", title: "The broken token", glyph: "G", hp: 58, damage: 9, attackMs: 5_600, difficulty: "easy", color: "#57d9a3" },
-  { name: "Syntax Serpent", title: "Keeper of the second gate", glyph: "S", hp: 92, damage: 12, attackMs: 5_000, difficulty: "normal", color: "#67a8ff" },
-  { name: "Null Warden", title: "Nothing gets past", glyph: "N", hp: 132, damage: 15, attackMs: 4_500, difficulty: "normal", color: "#ff9f67" },
-  { name: "Void Compiler", title: "Final boss · eater of clean builds", glyph: "V", hp: 210, damage: 18, attackMs: 4_000, difficulty: "hard", color: "#bc79ff" },
+  { name: "Glitchling", title: "The broken token", sprite: "/games/typeraid/glitchling.webp", hp: 58, damage: 9, attackMs: 5_600, difficulty: "easy", color: "#57d9a3" },
+  { name: "Syntax Serpent", title: "Keeper of the second gate", sprite: "/games/typeraid/syntax-serpent.webp", hp: 92, damage: 12, attackMs: 5_000, difficulty: "normal", color: "#67a8ff" },
+  { name: "Null Warden", title: "Nothing gets past", sprite: "/games/typeraid/null-warden.webp", hp: 132, damage: 15, attackMs: 4_500, difficulty: "normal", color: "#ff9f67" },
+  { name: "Void Compiler", title: "Final boss · eater of clean builds", sprite: "/games/typeraid/void-compiler.webp", hp: 210, damage: 18, attackMs: 4_000, difficulty: "hard", color: "#bc79ff" },
 ] as const;
 
 const UPGRADES: readonly Upgrade[] = [
@@ -75,14 +76,16 @@ function HealthBar({ value, max, color, label }: { value: number; max: number; c
 
 function EnemyAvatar({ enemy, hurt }: { enemy: Enemy; hurt: boolean }) {
   return (
-    <div className={`typeraid-enemy relative ${hurt ? "typeraid-enemy-hit" : ""}`} style={{ "--enemy-color": enemy.color } as React.CSSProperties}>
-      <div aria-hidden className="absolute inset-5 rounded-full bg-[var(--enemy-color)] opacity-20 blur-2xl" />
-      <div className="relative grid h-36 w-36 place-items-center rounded-[38%_62%_55%_45%] border border-white/15 bg-[#171326] shadow-[inset_0_0_50px_rgba(255,255,255,.035),0_22px_70px_-32px_var(--enemy-color)] sm:h-44 sm:w-44">
-        <div className="absolute inset-3 rounded-[55%_45%_38%_62%] border border-dashed border-white/10" />
-        <span className="font-mono text-6xl font-black text-[var(--enemy-color)] drop-shadow-[0_0_20px_var(--enemy-color)] sm:text-7xl">{enemy.glyph}</span>
-        <span className="absolute left-[27%] top-[35%] h-2 w-2 rounded-full bg-white shadow-[0_0_12px_white]" />
-        <span className="absolute right-[27%] top-[35%] h-2 w-2 rounded-full bg-white shadow-[0_0_12px_white]" />
-      </div>
+    <div className={`typeraid-enemy relative h-56 w-56 sm:h-72 sm:w-72 ${hurt ? "typeraid-enemy-hit" : ""}`} style={{ "--enemy-color": enemy.color } as React.CSSProperties}>
+      <div aria-hidden className="absolute inset-[18%] rounded-full bg-[var(--enemy-color)] opacity-25 blur-3xl" />
+      <Image
+        src={enemy.sprite}
+        alt={`${enemy.name}, ${enemy.title}`}
+        fill
+        priority
+        sizes="(min-width: 640px) 288px, 224px"
+        className="relative object-contain drop-shadow-[0_24px_35px_rgba(0,0,0,.7)]"
+      />
     </div>
   );
 }
@@ -164,9 +167,8 @@ export function TypeRaidGame() {
     setRewards([]);
     setElapsedMs(0);
     setAttackLeft(first.attackMs);
-    setPhase("battle");
-    focusInput();
-  }, [focusInput]);
+    setPhase("briefing");
+  }, []);
 
   const finishRun = useCallback((outcome: "victory" | "defeat", finalScore: number) => {
     setPhase(outcome);
@@ -314,6 +316,7 @@ export function TypeRaidGame() {
   }, [focusInput, phase]);
 
   const attackPercent = clamp((attackLeft / (enemy.attackMs + attackBonus)) * 100, 0, 100);
+  const nextWordDamage = 10 + bonusDamage + Math.floor((combo + 1) / 3) * 2 * comboScale;
   const runStats = useMemo(() => [
     { label: "Score", value: score.toLocaleString() },
     { label: "Combo", value: `${combo}×` },
@@ -336,9 +339,20 @@ export function TypeRaidGame() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#a58dff]">TypeFlow presents</p>
             <h1 className="mt-0.5 text-lg font-bold tracking-[-0.04em]">TypeRaid</h1>
           </div>
-          <div className="min-w-20 text-right">
-            <p className="text-[9px] uppercase tracking-[0.14em] text-white/35">Best</p>
-            <p className="font-mono text-sm font-semibold text-white/75">{bestScore.toLocaleString()}</p>
+          <div className="flex min-w-20 items-center justify-end gap-2 text-right">
+            {phase === "battle" || phase === "paused" ? (
+              <button
+                type="button"
+                onClick={() => setPhase("briefing")}
+                className="rounded-lg border border-white/10 bg-white/[.04] px-2.5 py-1.5 text-[10px] font-semibold text-white/55 transition hover:bg-white/[.08] hover:text-white"
+              >
+                ? Rules
+              </button>
+            ) : null}
+            <div className="hidden sm:block">
+              <p className="text-[9px] uppercase tracking-[0.14em] text-white/35">Best</p>
+              <p className="font-mono text-sm font-semibold text-white/75">{bestScore.toLocaleString()}</p>
+            </div>
           </div>
         </header>
 
@@ -353,75 +367,101 @@ export function TypeRaidGame() {
                 Type fast.<br /><span className="text-white/30">Survive the void.</span>
               </h2>
               <p className="mx-auto mt-6 max-w-lg text-sm leading-6 text-white/48">
-                Complete words to strike. Build combos for heavier damage. One wrong key hurts—and every enemy is faster than the last.
+                Defeat four monsters using only your keyboard. Every completed word attacks; every wrong key hurts you.
               </p>
               <button type="button" onClick={startRun} className="mt-8 rounded-2xl bg-[#8a6cff] px-8 py-3.5 text-sm font-semibold text-white shadow-[0_12px_40px_-14px_#7c5cff] transition hover:-translate-y-0.5 hover:bg-[#9b81ff] active:translate-y-0">
                 Begin the raid
               </button>
-              <div className="mx-auto mt-9 grid max-w-xl grid-cols-3 gap-2 text-left">
-                {[['TYPE', 'Words attack'], ['COMBO', 'Streaks amplify'], ['UPGRADE', 'Evolve each room']].map(([label, body]) => (
+              <div className="mx-auto mt-9 grid max-w-2xl grid-cols-3 gap-2 text-left">
+                {[['1 · TYPE', 'Finish the shown word to hit the enemy.'], ['2 · SURVIVE', 'Beat its red attack timer and avoid typos.'], ['3 · UPGRADE', 'Defeat it, choose a power, then enter the next room.']].map(([label, body]) => (
                   <div key={label} className="rounded-xl border border-white/[.07] bg-white/[.025] p-3">
                     <p className="text-[9px] font-semibold tracking-[.14em] text-[#9f87ff]">{label}</p>
-                    <p className="mt-1 text-[11px] text-white/42">{body}</p>
+                    <p className="mt-1 text-[11px] leading-4 text-white/42">{body}</p>
                   </div>
                 ))}
               </div>
             </section>
           </main>
         ) : (
-          <main className="flex flex-1 flex-col py-5 sm:py-7">
-            <div className="mx-auto grid w-full max-w-5xl grid-cols-4 gap-2 sm:gap-3">
+          <main className="flex flex-1 flex-col py-4 sm:py-6">
+            <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 rounded-2xl border border-[#9b7cff]/20 bg-[#9b7cff]/[.06] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#9b7cff]/15 text-[#ad99ff]">⚔</span>
+                <div>
+                  <p className="text-xs font-semibold text-white/85">Your objective: reduce the enemy&apos;s green health to zero.</p>
+                  <p className="mt-0.5 text-[10px] text-white/38">Type the large word exactly. The next word appears automatically—no Space or Enter needed.</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-[#ff5c7a]/[.08] px-2.5 py-1.5 text-[9px] text-[#ff8ba0] sm:hidden">
+                <span>Enemy strikes in</span>
+                <strong className="font-mono text-xs">{Math.max(0, attackLeft / 1000).toFixed(1)}s</strong>
+              </div>
+              <div className="grid grid-cols-4 gap-5 sm:shrink-0">
               {runStats.map((stat) => (
-                <div key={stat.label} className="rounded-xl border border-white/[.07] bg-white/[.025] px-3 py-2.5 text-center sm:px-5">
-                  <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-white/32 sm:text-[9px]">{stat.label}</p>
-                  <p className="mt-1 font-mono text-sm font-semibold text-white/85 sm:text-lg">{stat.value}</p>
+                <div key={stat.label} className="text-right">
+                  <p className="text-[8px] font-semibold uppercase tracking-[0.13em] text-white/28">{stat.label}</p>
+                  <p className="mt-0.5 font-mono text-xs font-semibold text-white/80 sm:text-sm">{stat.value}</p>
                 </div>
               ))}
+              </div>
             </div>
 
-            <section className="mx-auto mt-5 grid w-full max-w-5xl flex-1 gap-6 lg:grid-cols-[1fr_1.15fr] lg:items-center">
-              <div className="flex flex-col items-center">
-                <div className="mb-3 flex items-center gap-2">
+            <section className="mx-auto mt-4 grid w-full max-w-6xl flex-1 gap-4 lg:grid-cols-[.9fr_1.1fr] lg:items-stretch">
+              <div className="relative order-2 flex min-h-[28rem] flex-col overflow-hidden rounded-3xl border border-white/[.08] bg-[radial-gradient(circle_at_50%_48%,color-mix(in_srgb,var(--enemy-color)_12%,transparent),transparent_58%),linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.012))] p-5 lg:order-1 lg:min-h-[31rem]" style={{ "--enemy-color": enemy.color } as React.CSSProperties}>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/35">Enemy · room {room + 1} of {ENEMIES.length}</p>
+                    <h2 className="mt-1 text-xl font-semibold tracking-tight">{enemy.name}</h2>
+                    <p className="mt-0.5 text-[11px] text-white/35">{enemy.title}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
                   {ENEMIES.map((entry, index) => (
                     <span key={entry.name} className={`h-1.5 rounded-full transition-all ${index === room ? "w-8 bg-[#9b7cff]" : index < room ? "w-4 bg-[#57d9a3]" : "w-4 bg-white/10"}`} />
                   ))}
+                  </div>
                 </div>
-                <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/35">Room {room + 1} of {ENEMIES.length}</p>
-                <div className="relative mt-5">
+
+                <div className="relative flex flex-1 items-center justify-center py-2">
                   <EnemyAvatar enemy={enemy} hurt={enemyHurt} />
-                  {floatText && enemyHurt ? <span className="typeraid-float absolute right-0 top-8 font-mono text-lg font-black text-white">{floatText}</span> : null}
+                  {floatText && enemyHurt ? <span className="typeraid-float absolute right-[18%] top-[24%] font-mono text-xl font-black text-white">{floatText}</span> : null}
                 </div>
-                <h2 className="mt-5 text-xl font-semibold tracking-tight">{enemy.name}</h2>
-                <p className="mt-1 text-xs text-white/35">{enemy.title}</p>
-                <div className="mt-5 w-full max-w-sm">
-                  <HealthBar value={enemyHp} max={enemy.hp} color={enemy.color} label="Enemy integrity" />
-                  <div className="mt-3">
-                    <div className="mb-1.5 flex justify-between text-[9px] uppercase tracking-[0.13em] text-white/30"><span>Incoming attack</span><span>{Math.max(0, attackLeft / 1000).toFixed(1)}s</span></div>
-                    <div className="h-1 overflow-hidden rounded-full bg-white/[.06]"><div className="h-full bg-white/40 transition-[width] duration-100" style={{ width: `${attackPercent}%` }} /></div>
+
+                <div className="space-y-4 rounded-2xl border border-white/[.07] bg-black/25 p-4">
+                  <HealthBar value={enemyHp} max={enemy.hp} color={enemy.color} label="Enemy health — bring this to 0" />
+                  <div>
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#ff718d]"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ff5c7a]" /> Enemy attacks in</span>
+                      <span className="font-mono text-sm font-bold text-[#ff8299]">{Math.max(0, attackLeft / 1000).toFixed(1)}s</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-white/[.06]"><div className="h-full bg-[#ff5c7a] shadow-[0_0_14px_rgba(255,92,122,.55)] transition-[width] duration-100" style={{ width: `${attackPercent}%` }} /></div>
+                    <p className="mt-2 text-[10px] text-white/36">When it reaches zero, {enemy.name} deals <strong className="text-white/65">{Math.max(1, enemy.damage - armor)} damage</strong> and your combo resets.</p>
                   </div>
                 </div>
               </div>
 
-              <div className={`relative rounded-3xl border border-white/[.08] bg-[#11101a]/90 p-5 shadow-[0_32px_90px_-50px_#7c5cff] backdrop-blur sm:p-7 ${playerHurt ? "typeraid-player-hit" : ""}`} onClick={focusInput}>
+              <div className={`relative order-1 flex min-h-[25rem] flex-col rounded-3xl border border-white/[.08] bg-[#11101a]/90 p-5 shadow-[0_32px_90px_-50px_#7c5cff] backdrop-blur sm:p-7 lg:order-2 lg:min-h-[31rem] ${playerHurt ? "typeraid-player-hit" : ""}`} onClick={focusInput}>
                 {floatText && playerHurt ? <span className="typeraid-float absolute right-6 top-4 z-10 font-mono text-lg font-black text-[#ff6688]">{floatText}</span> : null}
-                <HealthBar value={hp} max={maxHp} color={hp < maxHp * 0.3 ? "#ff5c7a" : "#8b70ff"} label="Your health" />
+                <HealthBar value={hp} max={maxHp} color={hp < maxHp * 0.3 ? "#ff5c7a" : "#8b70ff"} label="Your health — do not let this reach 0" />
 
-                <div className="mt-9 text-center">
-                  <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-white/28">Type to attack</p>
-                  <div className="mt-4 min-h-16 break-all font-mono text-[clamp(2rem,7vw,4.4rem)] font-bold leading-none tracking-[-0.055em]">
+                <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
+                  <span className="rounded-full border border-[#9b7cff]/20 bg-[#9b7cff]/10 px-3 py-1 text-[10px] font-semibold text-[#b6a5ff]">Complete word → deal {nextWordDamage} damage</span>
+                  <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/38">Type this word now</p>
+                  <div className="mt-4 min-h-16 break-all font-mono text-[clamp(2.6rem,7vw,5rem)] font-bold leading-none tracking-[-0.055em]">
                     <span className="text-[#a88fff]">{target.slice(0, typed.length)}</span>
                     <span className="relative text-white/85">
                       <span className="absolute -left-px bottom-0 top-0 w-[2px] animate-pulse bg-[#a88fff]" />
                       {target.slice(typed.length)}
                     </span>
                   </div>
-                  <div className="mt-5 flex justify-center gap-4 font-mono text-sm text-white/18">
+                  <p className="mt-7 text-[9px] font-semibold uppercase tracking-[.14em] text-white/22">Coming next</p>
+                  <div className="mt-2 flex justify-center gap-4 font-mono text-sm text-white/22">
                     {nextWords.map((word) => <span key={word}>{word}</span>)}
                   </div>
+                  <p className="mt-7 rounded-lg bg-white/[.035] px-3 py-2 text-[10px] text-white/38">Start typing anywhere · word submits automatically · Backspace is allowed</p>
                 </div>
 
-                <div className="mt-9 flex items-center justify-between border-t border-white/[.06] pt-4 text-[10px] text-white/30">
-                  <span>Wrong keys deal {typoDamage} damage</span>
+                <div className="flex items-center justify-between gap-3 border-t border-white/[.06] pt-4 text-[10px]">
+                  <span className="text-[#ff8299]">⚠ Wrong key: lose {typoDamage} HP, 20 score, and your combo</span>
                   <button type="button" onClick={() => setPhase("paused")} className="rounded-lg px-2 py-1 transition-colors hover:bg-white/[.06] hover:text-white/65">Esc · pause</button>
                 </div>
                 <input ref={inputRef} value="" onChange={() => undefined} onKeyDown={handleKey} aria-label={`Type the word ${target}`} autoCapitalize="off" autoComplete="off" autoCorrect="off" spellCheck={false} className="pointer-events-none absolute h-px w-px opacity-0" />
@@ -438,6 +478,62 @@ export function TypeRaidGame() {
             ) : null}
           </main>
         )}
+
+        {phase === "briefing" ? (
+          <div className="absolute inset-0 z-40 grid place-items-center overflow-y-auto bg-[#09070f]/94 p-4 backdrop-blur-xl sm:p-6">
+            <section className="typeraid-enter w-full max-w-4xl overflow-hidden rounded-3xl border border-white/[.1] bg-[#11101a] shadow-[0_40px_120px_-55px_#7c5cff]">
+              <div className="grid lg:grid-cols-[.75fr_1.25fr]">
+                <div className="relative hidden min-h-[34rem] overflow-hidden border-r border-white/[.07] bg-[radial-gradient(circle_at_50%_45%,rgba(87,217,163,.18),transparent_46%),linear-gradient(180deg,rgba(255,255,255,.025),transparent)] p-6 lg:flex lg:flex-col">
+                  <div>
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#65dca9]">First opponent</p>
+                    <h3 className="mt-1 text-xl font-semibold">{enemy.name}</h3>
+                    <p className="mt-1 text-xs text-white/35">{enemy.title}</p>
+                  </div>
+                  <div className="flex flex-1 items-center justify-center">
+                    <EnemyAvatar enemy={enemy} hurt={false} />
+                  </div>
+                  <p className="rounded-xl border border-[#ff5c7a]/15 bg-[#ff5c7a]/[.07] p-3 text-[11px] leading-5 text-white/48">
+                    <strong className="text-[#ff8299]">Threat:</strong> attacks every {((enemy.attackMs + attackBonus) / 1000).toFixed(1)} seconds for {Math.max(1, enemy.damage - armor)} HP.
+                  </p>
+                </div>
+
+                <div className="p-5 sm:p-8">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a58dff]">How to play</p>
+                  <h2 className="mt-2 text-3xl font-bold tracking-[-0.045em] sm:text-4xl">Win the fight in three steps.</h2>
+                  <p className="mt-3 text-sm leading-6 text-white/42">Your keyboard is the weapon. There is no mouse control during combat.</p>
+
+                  <ol className="mt-7 space-y-3">
+                    {[
+                      ["1", "Type the large word", "Press its letters exactly as shown. It attacks automatically when the last letter is typed—do not press Space or Enter."],
+                      ["2", "Build a combo", "Each clean word deals at least 10 damage. Consecutive words increase your combo and unlock stronger hits."],
+                      ["3", "Beat the red timer", `The enemy attacks whenever its red timer empties. A wrong key also costs ${typoDamage} HP and resets your combo.`],
+                    ].map(([number, title, body]) => (
+                      <li key={number} className="flex gap-4 rounded-2xl border border-white/[.07] bg-white/[.025] p-4">
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#9b7cff]/12 font-mono text-sm font-bold text-[#b09cff]">{number}</span>
+                        <div>
+                          <h3 className="text-sm font-semibold text-white/90">{title}</h3>
+                          <p className="mt-1 text-[11px] leading-5 text-white/42">{body}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+
+                  <div className="mt-5 flex items-center gap-3 rounded-xl border border-[#65dca9]/15 bg-[#65dca9]/[.06] p-3 text-[11px] text-white/48">
+                    <span className="text-lg text-[#65dca9]">✓</span>
+                    <span><strong className="text-white/80">Win:</strong> empty the enemy health bar. <strong className="ml-1 text-white/80">Lose:</strong> your health reaches zero.</span>
+                  </div>
+
+                  <div className="mt-7 flex flex-wrap items-center gap-3">
+                    <button type="button" onClick={() => { setPhase("battle"); focusInput(); }} className="rounded-xl bg-[#8a6cff] px-6 py-3 text-sm font-semibold shadow-[0_14px_35px_-18px_#7c5cff] transition hover:bg-[#9b81ff]">
+                      {wordsTyped > 0 ? "Continue fighting" : `Fight ${enemy.name} →`}
+                    </button>
+                    <span className="text-[10px] text-white/28">Press Esc anytime to pause</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        ) : null}
 
         {phase === "paused" ? (
           <div className="absolute inset-0 z-30 grid place-items-center bg-[#09070f]/85 p-5 backdrop-blur-md">
