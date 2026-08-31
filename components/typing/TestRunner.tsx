@@ -7,7 +7,7 @@ import { ResultsPanel } from "./ResultsPanel";
 import { TestConfigBar } from "./TestConfigBar";
 import { TypingArea } from "./TypingArea";
 import { useSettings } from "@/hooks/useSettings";
-import { useTypingTest } from "@/hooks/useTypingTest";
+import { useTypingTest, type FinishedResult } from "@/hooks/useTypingTest";
 import type { Mode } from "@/lib/engine";
 
 /**
@@ -17,13 +17,15 @@ import type { Mode } from "@/lib/engine";
 export function TestRunner({
   mode,
   onModeChange,
+  onFinished,
 }: {
   mode: Mode;
   onModeChange?: (next: Mode) => void;
+  onFinished?: (finished: FinishedResult) => void;
 }) {
   const { settings } = useSettings();
   const { state, live, finished, onChar, onSpace, onBackspace, restart, startNewTest } =
-    useTypingTest({ mode, soundEnabled: settings.sound });
+    useTypingTest({ mode, soundEnabled: settings.sound, onFinished });
 
   const isFinished = state.status === "finished";
 

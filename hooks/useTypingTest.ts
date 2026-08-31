@@ -49,6 +49,7 @@ export type LiveStats = {
 type Options = {
   mode: Mode;
   soundEnabled: boolean;
+  onFinished?: (finished: FinishedResult) => void;
 };
 
 /** Snapshot of the numbers for a given state at a given elapsed time. */
@@ -66,7 +67,7 @@ function measure(snapshot: TestState, elapsedMs: number) {
  * Owns one run of the test. Mount this keyed by mode — a mode change is a new test,
  * and remounting is cheaper to reason about than resetting six pieces of state.
  */
-export function useTypingTest({ mode, soundEnabled }: Options) {
+export function useTypingTest({ mode, soundEnabled, onFinished }: Options) {
   const [state, setState] = useState<TestState>(() => newTest(mode));
   const [elapsedMs, setElapsedMs] = useState(0);
   const [samples, setSamples] = useState<Sample[]>([]);
@@ -128,13 +129,15 @@ export function useTypingTest({ mode, soundEnabled }: Options) {
       samplesRef.current = finalSamples;
       setSamples(finalSamples);
       setElapsedMs(safeDuration);
-      setFinished({
+      const completed: FinishedResult = {
         result,
         previousBest: previous ? previous.wpm : null,
         isPersonalBest: !previous || result.wpm > previous.wpm,
-      });
+      };
+      setFinished(completed);
+      onFinished?.(completed);
     },
-    [mode],
+    [mode, onFinished],
   );
 
   const reset = useCallback(
