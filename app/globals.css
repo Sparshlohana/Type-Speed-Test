@@ -21,6 +21,28 @@
   --error-soft: rgba(224, 53, 107, 0.14);
   --shadow: 0 1px 2px rgba(16, 16, 24, 0.06), 0 8px 24px rgba(16, 16, 24, 0.06);
 
+  /* Arcade surfaces keep the game atmosphere without forcing a dark theme. */
+  --raid-bg: #f6f3fc;
+  --raid-surface: #ffffff;
+  --raid-surface-soft: rgba(255, 255, 255, 0.74);
+  --raid-overlay: rgba(246, 243, 252, 0.94);
+  --raid-text: #1b1725;
+  --raid-muted: #696275;
+  --raid-faint: #938c9e;
+  --raid-border: rgba(42, 32, 64, 0.12);
+  --raid-fill: rgba(42, 32, 64, 0.045);
+  --raid-fill-hover: rgba(42, 32, 64, 0.08);
+  --raid-recessed: rgba(42, 32, 64, 0.06);
+  --raid-grid-line: rgba(42, 32, 64, 0.045);
+  --raid-accent-text: #6545dc;
+  --raid-success-text: #087653;
+  --raid-danger-text: #c72e51;
+  --raid-warning-text: #946000;
+  --raid-common: #626673;
+  --raid-rare: #1769bd;
+  --raid-epic: #773ab8;
+  --raid-legendary: #996000;
+
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --dur-fast: 150ms;
   --dur: 220ms;
@@ -41,6 +63,26 @@
     --error: #ff5c7a;
     --error-soft: rgba(255, 92, 122, 0.16);
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.32);
+    --raid-bg: #09070f;
+    --raid-surface: #11101a;
+    --raid-surface-soft: rgba(17, 16, 26, 0.9);
+    --raid-overlay: rgba(9, 7, 15, 0.94);
+    --raid-text: #ffffff;
+    --raid-muted: rgba(255, 255, 255, 0.55);
+    --raid-faint: rgba(255, 255, 255, 0.32);
+    --raid-border: rgba(255, 255, 255, 0.09);
+    --raid-fill: rgba(255, 255, 255, 0.035);
+    --raid-fill-hover: rgba(255, 255, 255, 0.075);
+    --raid-recessed: rgba(0, 0, 0, 0.25);
+    --raid-grid-line: rgba(255, 255, 255, 0.025);
+    --raid-accent-text: #a58dff;
+    --raid-success-text: #65dca9;
+    --raid-danger-text: #ff8299;
+    --raid-warning-text: #ffc66d;
+    --raid-common: #aeb1bd;
+    --raid-rare: #5ea6ff;
+    --raid-epic: #b77cff;
+    --raid-legendary: #ffb84d;
   }
 }
 
@@ -57,6 +99,26 @@
   --error: #ff5c7a;
   --error-soft: rgba(255, 92, 122, 0.16);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.32);
+  --raid-bg: #09070f;
+  --raid-surface: #11101a;
+  --raid-surface-soft: rgba(17, 16, 26, 0.9);
+  --raid-overlay: rgba(9, 7, 15, 0.94);
+  --raid-text: #ffffff;
+  --raid-muted: rgba(255, 255, 255, 0.55);
+  --raid-faint: rgba(255, 255, 255, 0.32);
+  --raid-border: rgba(255, 255, 255, 0.09);
+  --raid-fill: rgba(255, 255, 255, 0.035);
+  --raid-fill-hover: rgba(255, 255, 255, 0.075);
+  --raid-recessed: rgba(0, 0, 0, 0.25);
+  --raid-grid-line: rgba(255, 255, 255, 0.025);
+  --raid-accent-text: #a58dff;
+  --raid-success-text: #65dca9;
+  --raid-danger-text: #ff8299;
+  --raid-warning-text: #ffc66d;
+  --raid-common: #aeb1bd;
+  --raid-rare: #5ea6ff;
+  --raid-epic: #b77cff;
+  --raid-legendary: #ffb84d;
 }
 
 @theme inline {
@@ -71,6 +133,21 @@
   --color-accent-soft: var(--accent-soft);
   --color-error: var(--error);
   --color-error-soft: var(--error-soft);
+  --color-raid-bg: var(--raid-bg);
+  --color-raid-surface: var(--raid-surface);
+  --color-raid-surface-soft: var(--raid-surface-soft);
+  --color-raid-overlay: var(--raid-overlay);
+  --color-raid-text: var(--raid-text);
+  --color-raid-muted: var(--raid-muted);
+  --color-raid-faint: var(--raid-faint);
+  --color-raid-border: var(--raid-border);
+  --color-raid-fill: var(--raid-fill);
+  --color-raid-fill-hover: var(--raid-fill-hover);
+  --color-raid-recessed: var(--raid-recessed);
+  --color-raid-accent: var(--raid-accent-text);
+  --color-raid-success: var(--raid-success-text);
+  --color-raid-danger: var(--raid-danger-text);
+  --color-raid-warning: var(--raid-warning-text);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -219,10 +296,71 @@ body {
 
 .typeraid-grid {
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    linear-gradient(var(--raid-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--raid-grid-line) 1px, transparent 1px);
   background-size: 44px 44px;
   mask-image: linear-gradient(to bottom, black, transparent 85%);
+}
+
+/* Map the game's translucent neutral utilities onto the active arcade palette. */
+.typeraid-shell [class~="text-white/20"],
+.typeraid-shell [class~="text-white/22"],
+.typeraid-shell [class~="text-white/28"],
+.typeraid-shell [class~="text-white/30"],
+.typeraid-shell [class~="text-white/35"],
+.typeraid-shell [class~="text-white/36"] {
+  color: var(--raid-faint);
+}
+
+.typeraid-shell [class~="text-white/38"],
+.typeraid-shell [class~="text-white/42"],
+.typeraid-shell [class~="text-white/45"],
+.typeraid-shell [class~="text-white/48"],
+.typeraid-shell [class~="text-white/55"] {
+  color: var(--raid-muted);
+}
+
+.typeraid-shell [class~="text-white/65"],
+.typeraid-shell [class~="text-white/70"],
+.typeraid-shell [class~="text-white/75"],
+.typeraid-shell [class~="text-white/80"],
+.typeraid-shell [class~="text-white/85"],
+.typeraid-shell [class~="text-white/90"],
+.typeraid-shell [class~="hover:text-white"]:hover,
+.typeraid-shell [class~="hover:text-white/65"]:hover {
+  color: var(--raid-text);
+}
+
+.typeraid-shell [class~="border-white/10"],
+.typeraid-shell [class~="border-white/[.06]"],
+.typeraid-shell [class~="border-white/[.07]"],
+.typeraid-shell [class~="border-white/[.08]"],
+.typeraid-shell [class~="border-white/[.1]"] {
+  border-color: var(--raid-border);
+}
+
+.typeraid-shell [class~="ring-white/[.06]"] {
+  --tw-ring-color: var(--raid-border);
+}
+
+.typeraid-shell [class~="bg-white/[.025]"],
+.typeraid-shell [class~="bg-white/[.035]"],
+.typeraid-shell [class~="bg-white/[.04]"],
+.typeraid-shell [class~="bg-white/[.05]"] {
+  background-color: var(--raid-fill);
+}
+
+.typeraid-shell [class~="bg-white/10"],
+.typeraid-shell [class~="bg-white/[.06]"],
+.typeraid-shell [class~="bg-white/[.08]"],
+.typeraid-shell [class~="hover:bg-white/[.05]"]:hover,
+.typeraid-shell [class~="hover:bg-white/[.06]"]:hover,
+.typeraid-shell [class~="hover:bg-white/[.08]"]:hover {
+  background-color: var(--raid-fill-hover);
+}
+
+.typeraid-shell [class~="bg-black/25"] {
+  background-color: var(--raid-recessed);
 }
 
 .typeraid-enter {

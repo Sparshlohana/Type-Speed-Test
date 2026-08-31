@@ -69,10 +69,10 @@ const UPGRADES: readonly Upgrade[] = [
 ] as const;
 
 const RARITY_META: Record<UpgradeRarity, { label: string; color: string; soft: string }> = {
-  common: { label: "Common", color: "#aeb1bd", soft: "rgba(174,177,189,.09)" },
-  rare: { label: "Rare", color: "#5ea6ff", soft: "rgba(94,166,255,.1)" },
-  epic: { label: "Epic", color: "#b77cff", soft: "rgba(183,124,255,.11)" },
-  legendary: { label: "Legendary", color: "#ffb84d", soft: "rgba(255,184,77,.12)" },
+  common: { label: "Common", color: "var(--raid-common)", soft: "color-mix(in srgb, var(--raid-common) 10%, transparent)" },
+  rare: { label: "Rare", color: "var(--raid-rare)", soft: "color-mix(in srgb, var(--raid-rare) 10%, transparent)" },
+  epic: { label: "Epic", color: "var(--raid-epic)", soft: "color-mix(in srgb, var(--raid-epic) 11%, transparent)" },
+  legendary: { label: "Legendary", color: "var(--raid-legendary)", soft: "color-mix(in srgb, var(--raid-legendary) 12%, transparent)" },
 };
 
 const RARITY_WEIGHTS: readonly Record<UpgradeRarity, number>[] = [
@@ -150,7 +150,7 @@ function EnemyAvatar({ enemy, hurt }: { enemy: Enemy; hurt: boolean }) {
         fill
         priority
         sizes="(min-width: 640px) 288px, 224px"
-        className="relative object-contain drop-shadow-[0_24px_35px_rgba(0,0,0,.7)]"
+        className="relative object-contain drop-shadow-[0_24px_35px_color-mix(in_srgb,var(--raid-text)_45%,transparent)]"
       />
     </div>
   );
@@ -431,7 +431,7 @@ export function TypeRaidGame() {
   ], [accuracy, combo, score, wpm]);
 
   return (
-    <div className="typeraid-shell relative isolate min-h-[calc(100vh-4rem)] overflow-hidden bg-[#09070f] text-white">
+    <div className="typeraid-shell relative isolate min-h-[calc(100vh-4rem)] overflow-hidden bg-raid-bg text-raid-text">
       <div aria-hidden className="typeraid-grid absolute inset-0 opacity-35" />
       <div aria-hidden className="absolute left-1/2 top-[-18rem] h-[38rem] w-[48rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(124,92,255,.22),transparent_68%)]" />
 
@@ -442,7 +442,7 @@ export function TypeRaidGame() {
             <span className="hidden text-xs font-medium uppercase tracking-[0.16em] sm:inline">Arcade</span>
           </Link>
           <div className="text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#a58dff]">TypeFlow presents</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-raid-accent">TypeFlow presents</p>
             <h1 className="mt-0.5 text-lg font-bold tracking-[-0.04em]">TypeRaid</h1>
           </div>
           <div className="flex min-w-20 items-center justify-end gap-2 text-right">
@@ -466,9 +466,9 @@ export function TypeRaidGame() {
           <main className="grid flex-1 place-items-center py-10">
             <section className="typeraid-enter w-full max-w-4xl text-center">
               <div className="mx-auto grid h-28 w-28 place-items-center rounded-[38%_62%_58%_42%] border border-[#9b7cff]/30 bg-[#9b7cff]/10 shadow-[0_0_80px_-20px_#7c5cff]">
-                <span className="font-mono text-5xl font-black text-[#af9aff] drop-shadow-[0_0_20px_#7c5cff]">T</span>
+                <span className="font-mono text-5xl font-black text-raid-accent drop-shadow-[0_0_20px_#7c5cff]">T</span>
               </div>
-              <p className="mt-8 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#a58dff]">A four-room typing roguelike</p>
+              <p className="mt-8 text-[10px] font-semibold uppercase tracking-[0.24em] text-raid-accent">A four-room typing roguelike</p>
               <h2 className="mx-auto mt-3 max-w-3xl text-5xl font-bold leading-[.92] tracking-[-0.065em] sm:text-7xl">
                 Type fast.<br /><span className="text-white/30">Survive the void.</span>
               </h2>
@@ -481,7 +481,7 @@ export function TypeRaidGame() {
               <div className="mx-auto mt-9 grid max-w-2xl grid-cols-3 gap-2 text-left">
                 {[['1 · TYPE', 'Finish the shown word to hit the enemy.'], ['2 · SURVIVE', 'Beat its red attack timer and avoid typos.'], ['3 · UPGRADE', 'Defeat it, choose a power, then enter the next room.']].map(([label, body]) => (
                   <div key={label} className="rounded-xl border border-white/[.07] bg-white/[.025] p-3">
-                    <p className="text-[9px] font-semibold tracking-[.14em] text-[#9f87ff]">{label}</p>
+                    <p className="text-[9px] font-semibold tracking-[.14em] text-raid-accent">{label}</p>
                     <p className="mt-1 text-[11px] leading-4 text-white/42">{body}</p>
                   </div>
                 ))}
@@ -492,13 +492,13 @@ export function TypeRaidGame() {
           <main className="flex flex-1 flex-col py-4 sm:py-6">
             <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 rounded-2xl border border-[#9b7cff]/20 bg-[#9b7cff]/[.06] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#9b7cff]/15 text-[#ad99ff]">⚔</span>
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#9b7cff]/15 text-raid-accent">⚔</span>
                 <div>
                   <p className="text-xs font-semibold text-white/85">Your objective: reduce the enemy&apos;s green health to zero.</p>
                   <p className="mt-0.5 text-[10px] text-white/38">Type the large word exactly. The next word appears automatically—no Space or Enter needed.</p>
                 </div>
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-[#ff5c7a]/[.08] px-2.5 py-1.5 text-[9px] text-[#ff8ba0] sm:hidden">
+              <div className="flex items-center justify-between rounded-lg bg-[#ff5c7a]/[.08] px-2.5 py-1.5 text-[9px] text-raid-danger sm:hidden">
                 <span>Enemy strikes in</span>
                 <strong className="font-mono text-xs">{Math.max(0, attackLeft / 1000).toFixed(1)}s</strong>
               </div>
@@ -513,7 +513,7 @@ export function TypeRaidGame() {
             </div>
 
             <section className="mx-auto mt-4 grid w-full max-w-6xl flex-1 gap-4 lg:grid-cols-[.9fr_1.1fr] lg:items-stretch">
-              <div className="relative order-2 flex min-h-[28rem] flex-col overflow-hidden rounded-3xl border border-white/[.08] bg-[radial-gradient(circle_at_50%_48%,color-mix(in_srgb,var(--enemy-color)_12%,transparent),transparent_58%),linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.012))] p-5 lg:order-1 lg:min-h-[31rem]" style={{ "--enemy-color": enemy.color } as React.CSSProperties}>
+              <div className="relative order-2 flex min-h-[28rem] flex-col overflow-hidden rounded-3xl border border-white/[.08] bg-[radial-gradient(circle_at_50%_48%,color-mix(in_srgb,var(--enemy-color)_12%,transparent),transparent_58%),linear-gradient(180deg,var(--raid-fill),transparent)] p-5 lg:order-1 lg:min-h-[31rem]" style={{ "--enemy-color": enemy.color } as React.CSSProperties}>
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/35">Enemy · room {room + 1} of {ENEMIES.length}</p>
@@ -529,15 +529,15 @@ export function TypeRaidGame() {
 
                 <div className="relative flex flex-1 items-center justify-center py-2">
                   <EnemyAvatar enemy={enemy} hurt={enemyHurt} />
-                  {floatText && enemyHurt ? <span className="typeraid-float absolute right-[18%] top-[24%] font-mono text-xl font-black text-white">{floatText}</span> : null}
+                  {floatText && enemyHurt ? <span className="typeraid-float absolute right-[18%] top-[24%] font-mono text-xl font-black text-raid-text">{floatText}</span> : null}
                 </div>
 
                 <div className="space-y-4 rounded-2xl border border-white/[.07] bg-black/25 p-4">
                   <HealthBar value={enemyHp} max={enemy.hp} color={enemy.color} label="Enemy health — bring this to 0" />
                   <div>
                     <div className="mb-2 flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#ff718d]"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ff5c7a]" /> Enemy attacks in</span>
-                      <span className="font-mono text-sm font-bold text-[#ff8299]">{Math.max(0, attackLeft / 1000).toFixed(1)}s</span>
+                      <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-raid-danger"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ff5c7a]" /> Enemy attacks in</span>
+                      <span className="font-mono text-sm font-bold text-raid-danger">{Math.max(0, attackLeft / 1000).toFixed(1)}s</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-white/[.06]"><div className="h-full bg-[#ff5c7a] shadow-[0_0_14px_rgba(255,92,122,.55)] transition-[width] duration-100" style={{ width: `${attackPercent}%` }} /></div>
                     <p className="mt-2 text-[10px] text-white/36">When it reaches zero, {enemy.name} deals <strong className="text-white/65">{Math.max(1, enemy.damage - armor)} damage</strong> and your combo resets.</p>
@@ -545,20 +545,20 @@ export function TypeRaidGame() {
                 </div>
               </div>
 
-              <div className={`relative order-1 flex min-h-[25rem] flex-col rounded-3xl border border-white/[.08] bg-[#11101a]/90 p-5 shadow-[0_32px_90px_-50px_#7c5cff] backdrop-blur sm:p-7 lg:order-2 lg:min-h-[31rem] ${playerHurt ? "typeraid-player-hit" : ""}`} onClick={focusInput}>
-                {floatText && playerHurt ? <span className="typeraid-float absolute right-6 top-4 z-10 font-mono text-lg font-black text-[#ff6688]">{floatText}</span> : null}
+              <div className={`relative order-1 flex min-h-[25rem] flex-col rounded-3xl border border-white/[.08] bg-raid-surface-soft p-5 shadow-[0_32px_90px_-50px_#7c5cff] backdrop-blur sm:p-7 lg:order-2 lg:min-h-[31rem] ${playerHurt ? "typeraid-player-hit" : ""}`} onClick={focusInput}>
+                {floatText && playerHurt ? <span className="typeraid-float absolute right-6 top-4 z-10 font-mono text-lg font-black text-raid-danger">{floatText}</span> : null}
                 <HealthBar value={hp} max={maxHp} color={hp < maxHp * 0.3 ? "#ff5c7a" : "#8b70ff"} label="Your health — do not let this reach 0" />
 
                 <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
                   <div className="flex flex-wrap justify-center gap-2">
-                    <span className="rounded-full border border-[#9b7cff]/20 bg-[#9b7cff]/10 px-3 py-1 text-[10px] font-semibold text-[#b6a5ff]">Complete word → deal {nextWordDamage} damage</span>
-                    {nextEcho ? <span className="rounded-full border border-[#b77cff]/25 bg-[#b77cff]/10 px-3 py-1 text-[10px] font-semibold text-[#c99aff]">Arcane Echo ready · 2×</span> : null}
-                    {nextExecute ? <span className="rounded-full border border-[#ff5c7a]/25 bg-[#ff5c7a]/10 px-3 py-1 text-[10px] font-semibold text-[#ff8aa0]">Execute active · 2×</span> : null}
-                    {rageDamage > 0 ? <span className="rounded-full border border-[#ffb84d]/25 bg-[#ffb84d]/10 px-3 py-1 text-[10px] font-semibold text-[#ffc66d]">Berserker · +6</span> : null}
+                    <span className="rounded-full border border-[#9b7cff]/20 bg-[#9b7cff]/10 px-3 py-1 text-[10px] font-semibold text-raid-accent">Complete word → deal {nextWordDamage} damage</span>
+                    {nextEcho ? <span className="rounded-full border border-[#b77cff]/25 bg-[#b77cff]/10 px-3 py-1 text-[10px] font-semibold text-raid-accent">Arcane Echo ready · 2×</span> : null}
+                    {nextExecute ? <span className="rounded-full border border-[#ff5c7a]/25 bg-[#ff5c7a]/10 px-3 py-1 text-[10px] font-semibold text-raid-danger">Execute active · 2×</span> : null}
+                    {rageDamage > 0 ? <span className="rounded-full border border-[#ffb84d]/25 bg-[#ffb84d]/10 px-3 py-1 text-[10px] font-semibold text-raid-warning">Berserker · +6</span> : null}
                   </div>
                   <p className="mt-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/38">Type this word now</p>
                   <div className="mt-4 min-h-16 break-all font-mono text-[clamp(2.6rem,7vw,5rem)] font-bold leading-none tracking-[-0.055em]">
-                    <span className="text-[#a88fff]">{target.slice(0, typed.length)}</span>
+                    <span className="text-raid-accent">{target.slice(0, typed.length)}</span>
                     <span className="relative text-white/85">
                       <span className="absolute -left-px bottom-0 top-0 w-[2px] animate-pulse bg-[#a88fff]" />
                       {target.slice(typed.length)}
@@ -572,7 +572,7 @@ export function TypeRaidGame() {
                 </div>
 
                 <div className="flex items-center justify-between gap-3 border-t border-white/[.06] pt-4 text-[10px]">
-                  <span className="text-[#ff8299]">⚠ Wrong key: lose {typoDamage} HP, 20 score, and your combo</span>
+                  <span className="text-raid-danger">⚠ Wrong key: lose {typoDamage} HP, 20 score, and your combo</span>
                   <button type="button" onClick={() => setPhase("paused")} className="rounded-lg px-2 py-1 transition-colors hover:bg-white/[.06] hover:text-white/65">Esc · pause</button>
                 </div>
                 <input ref={inputRef} value="" onChange={() => undefined} onKeyDown={handleKey} aria-label={`Type the word ${target}`} autoCapitalize="off" autoComplete="off" autoCorrect="off" spellCheck={false} className="pointer-events-none absolute h-px w-px opacity-0" />
@@ -586,7 +586,7 @@ export function TypeRaidGame() {
                   const rarity = RARITY_META[upgrade.rarity];
                   const spent = id === "phoenix" && phoenixUsed;
                   return (
-                    <span key={id} title={upgrade.description} className="rounded-full border px-3 py-1 text-[10px]" style={{ borderColor: `${rarity.color}35`, background: rarity.soft, color: spent ? "rgba(255,255,255,.28)" : rarity.color }}>
+                    <span key={id} title={upgrade.description} className="rounded-full border px-3 py-1 text-[10px]" style={{ borderColor: `color-mix(in srgb, ${rarity.color} 24%, transparent)`, background: rarity.soft, color: spent ? "var(--raid-faint)" : rarity.color }}>
                       <span className="mr-1.5">{upgrade.symbol}</span>{upgrade.name}{spent ? " · spent" : ""}
                     </span>
                   );
@@ -597,12 +597,12 @@ export function TypeRaidGame() {
         )}
 
         {phase === "briefing" ? (
-          <div className="fixed inset-x-0 bottom-0 top-16 z-20 grid place-items-center overflow-y-auto bg-[#09070f]/94 p-4 pb-20 backdrop-blur-xl sm:p-6">
-            <section className="typeraid-enter w-full max-w-4xl overflow-hidden rounded-3xl border border-white/[.1] bg-[#11101a] shadow-[0_40px_120px_-55px_#7c5cff]">
+          <div className="fixed inset-x-0 bottom-0 top-16 z-20 grid place-items-center overflow-y-auto bg-raid-overlay p-4 pb-20 backdrop-blur-xl sm:p-6">
+            <section className="typeraid-enter w-full max-w-4xl overflow-hidden rounded-3xl border border-white/[.1] bg-raid-surface shadow-[0_40px_120px_-55px_#7c5cff]">
               <div className="grid lg:grid-cols-[.75fr_1.25fr]">
-                <div className="relative hidden min-h-[34rem] overflow-hidden border-r border-white/[.07] bg-[radial-gradient(circle_at_50%_45%,rgba(87,217,163,.18),transparent_46%),linear-gradient(180deg,rgba(255,255,255,.025),transparent)] p-6 lg:flex lg:flex-col">
+                <div className="relative hidden min-h-[34rem] overflow-hidden border-r border-white/[.07] bg-[radial-gradient(circle_at_50%_45%,rgba(87,217,163,.18),transparent_46%),linear-gradient(180deg,var(--raid-fill),transparent)] p-6 lg:flex lg:flex-col">
                   <div>
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[#65dca9]">First opponent</p>
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-raid-success">First opponent</p>
                     <h3 className="mt-1 text-xl font-semibold">{enemy.name}</h3>
                     <p className="mt-1 text-xs text-white/35">{enemy.title}</p>
                   </div>
@@ -610,12 +610,12 @@ export function TypeRaidGame() {
                     <EnemyAvatar enemy={enemy} hurt={false} />
                   </div>
                   <p className="rounded-xl border border-[#ff5c7a]/15 bg-[#ff5c7a]/[.07] p-3 text-[11px] leading-5 text-white/48">
-                    <strong className="text-[#ff8299]">Threat:</strong> attacks every {((enemy.attackMs + attackBonus) / 1000).toFixed(1)} seconds for {Math.max(1, enemy.damage - armor)} HP.
+                    <strong className="text-raid-danger">Threat:</strong> attacks every {((enemy.attackMs + attackBonus) / 1000).toFixed(1)} seconds for {Math.max(1, enemy.damage - armor)} HP.
                   </p>
                 </div>
 
                 <div className="p-5 sm:p-8">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#a58dff]">How to play</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-raid-accent">How to play</p>
                   <h2 className="mt-2 text-3xl font-bold tracking-[-0.045em] sm:text-4xl">Win the fight in three steps.</h2>
                   <p className="mt-3 text-sm leading-6 text-white/42">Your keyboard is the weapon. There is no mouse control during combat.</p>
 
@@ -626,7 +626,7 @@ export function TypeRaidGame() {
                       ["3", "Beat the red timer", `The enemy attacks whenever its red timer empties. A wrong key also costs ${typoDamage} HP and resets your combo.`],
                     ].map(([number, title, body]) => (
                       <li key={number} className="flex gap-4 rounded-2xl border border-white/[.07] bg-white/[.025] p-4">
-                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#9b7cff]/12 font-mono text-sm font-bold text-[#b09cff]">{number}</span>
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#9b7cff]/12 font-mono text-sm font-bold text-raid-accent">{number}</span>
                         <div>
                           <h3 className="text-sm font-semibold text-white/90">{title}</h3>
                           <p className="mt-1 text-[11px] leading-5 text-white/42">{body}</p>
@@ -636,7 +636,7 @@ export function TypeRaidGame() {
                   </ol>
 
                   <div className="mt-5 flex items-center gap-3 rounded-xl border border-[#65dca9]/15 bg-[#65dca9]/[.06] p-3 text-[11px] text-white/48">
-                    <span className="text-lg text-[#65dca9]">✓</span>
+                    <span className="text-lg text-raid-success">✓</span>
                     <span><strong className="text-white/80">Win:</strong> empty the enemy health bar. <strong className="ml-1 text-white/80">Lose:</strong> your health reaches zero.</span>
                   </div>
 
@@ -653,32 +653,32 @@ export function TypeRaidGame() {
         ) : null}
 
         {phase === "paused" ? (
-          <div className="fixed inset-x-0 bottom-0 top-16 z-20 grid place-items-center overflow-y-auto bg-[#09070f]/85 p-5 pb-20 backdrop-blur-md sm:pb-5">
+          <div className="fixed inset-x-0 bottom-0 top-16 z-20 grid place-items-center overflow-y-auto bg-raid-overlay p-5 pb-20 backdrop-blur-md sm:pb-5">
             <div className="text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#9f87ff]">Run suspended</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-raid-accent">Run suspended</p>
               <h2 className="mt-2 text-4xl font-bold tracking-[-0.05em]">Catch your breath.</h2>
-              <button type="button" onClick={() => { setPhase("battle"); focusInput(); }} className="mt-7 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-[#0b0912]">Resume raid</button>
+              <button type="button" onClick={() => { setPhase("battle"); focusInput(); }} className="mt-7 rounded-xl bg-raid-text px-6 py-3 text-sm font-semibold text-raid-bg">Resume raid</button>
             </div>
           </div>
         ) : null}
 
         {phase === "reward" ? (
-          <div className="fixed inset-x-0 bottom-0 top-16 z-20 grid place-items-center overflow-y-auto bg-[#09070f]/94 p-5 pb-20 backdrop-blur-xl sm:pb-5">
+          <div className="fixed inset-x-0 bottom-0 top-16 z-20 grid place-items-center overflow-y-auto bg-raid-overlay p-5 pb-20 backdrop-blur-xl sm:pb-5">
             <section className="w-full max-w-4xl py-8 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#64dca9]">Room cleared</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-raid-success">Room cleared</p>
               <h2 className="mt-2 text-4xl font-bold tracking-[-0.05em] sm:text-5xl">Choose your advantage.</h2>
               <p className="mt-3 text-sm text-white/38">You recover 14 health after choosing. Later rooms roll better rarities; boss prep guarantees an Epic attack option.</p>
               <div className="mt-4 flex flex-wrap justify-center gap-2">
                 {(Object.keys(RARITY_META) as UpgradeRarity[]).map((rarityId) => {
                   const rarity = RARITY_META[rarityId];
-                  return <span key={rarityId} className="rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[.12em]" style={{ color: rarity.color, borderColor: `${rarity.color}35`, background: rarity.soft }}>{rarity.label}</span>;
+                  return <span key={rarityId} className="rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[.12em]" style={{ color: rarity.color, borderColor: `color-mix(in srgb, ${rarity.color} 24%, transparent)`, background: rarity.soft }}>{rarity.label}</span>;
                 })}
               </div>
               <div className="mt-9 grid gap-3 md:grid-cols-3">
                 {rewards.map((upgrade, index) => {
                   const rarity = RARITY_META[upgrade.rarity];
                   return (
-                  <button key={upgrade.id} type="button" onClick={() => chooseUpgrade(upgrade)} className="group relative overflow-hidden rounded-2xl border p-6 text-left transition duration-200 hover:-translate-y-1" style={{ borderColor: `${rarity.color}42`, background: `linear-gradient(145deg, ${rarity.soft}, rgba(255,255,255,.025))`, boxShadow: upgrade.rarity === "legendary" ? `0 20px 60px -35px ${rarity.color}` : undefined }}>
+                  <button key={upgrade.id} type="button" onClick={() => chooseUpgrade(upgrade)} className="group relative overflow-hidden rounded-2xl border p-6 text-left transition duration-200 hover:-translate-y-1" style={{ borderColor: `color-mix(in srgb, ${rarity.color} 30%, transparent)`, background: `linear-gradient(145deg, ${rarity.soft}, var(--raid-fill))`, boxShadow: upgrade.rarity === "legendary" ? `0 20px 60px -35px ${rarity.color}` : undefined }}>
                     <div aria-hidden className="absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${rarity.color}, transparent)` }} />
                     <div className="flex items-start justify-between">
                       <span className="grid h-12 w-12 place-items-center rounded-2xl font-mono text-xl font-bold" style={{ color: rarity.color, background: rarity.soft }}>{upgrade.symbol}</span>
@@ -697,12 +697,12 @@ export function TypeRaidGame() {
         ) : null}
 
         {phase === "victory" || phase === "defeat" ? (
-          <div className="fixed inset-x-0 bottom-0 top-16 z-20 grid place-items-center overflow-y-auto bg-[#09070f]/94 p-5 pb-20 backdrop-blur-xl sm:pb-5">
+          <div className="fixed inset-x-0 bottom-0 top-16 z-20 grid place-items-center overflow-y-auto bg-raid-overlay p-5 pb-20 backdrop-blur-xl sm:pb-5">
             <section className="w-full max-w-2xl py-8 text-center">
-              <div className={`mx-auto grid h-20 w-20 place-items-center rounded-[38%_62%_55%_45%] border ${phase === "victory" ? "border-[#65dca9]/30 bg-[#65dca9]/10 text-[#65dca9]" : "border-[#ff5c7a]/30 bg-[#ff5c7a]/10 text-[#ff718d]"}`}>
+              <div className={`mx-auto grid h-20 w-20 place-items-center rounded-[38%_62%_55%_45%] border ${phase === "victory" ? "border-[#65dca9]/30 bg-[#65dca9]/10 text-raid-success" : "border-[#ff5c7a]/30 bg-[#ff5c7a]/10 text-raid-danger"}`}>
                 <span className="font-mono text-3xl font-black">{phase === "victory" ? "V" : "×"}</span>
               </div>
-              <p className={`mt-7 text-[10px] font-semibold uppercase tracking-[0.22em] ${phase === "victory" ? "text-[#65dca9]" : "text-[#ff718d]"}`}>{phase === "victory" ? "Raid complete" : `Fallen in room ${room + 1}`}</p>
+              <p className={`mt-7 text-[10px] font-semibold uppercase tracking-[0.22em] ${phase === "victory" ? "text-raid-success" : "text-raid-danger"}`}>{phase === "victory" ? "Raid complete" : `Fallen in room ${room + 1}`}</p>
               <h2 className="mt-2 text-5xl font-bold tracking-[-0.06em] sm:text-6xl">{phase === "victory" ? "The void compiled." : "The void won."}</h2>
               <p className="mt-4 text-sm text-white/38">{phase === "victory" ? "Every enemy defeated. Your keyboard survives another day." : "A cleaner combo might be all that stands between you and the next room."}</p>
               <div className="mt-9 grid grid-cols-4 overflow-hidden rounded-2xl border border-white/[.08] bg-white/[.025]">
@@ -714,7 +714,7 @@ export function TypeRaidGame() {
                 ))}
               </div>
               <div className="mt-8 flex flex-wrap justify-center gap-3">
-                <button type="button" onClick={startRun} className="rounded-xl bg-[#8a6cff] px-6 py-3 text-sm font-semibold transition hover:bg-[#9b81ff]">Raid again</button>
+                <button type="button" onClick={startRun} className="rounded-xl bg-[#8a6cff] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#9b81ff]">Raid again</button>
                 <Link href="/games" className="rounded-xl border border-white/10 px-6 py-3 text-sm font-semibold text-white/55 transition hover:bg-white/[.05] hover:text-white">Back to arcade</Link>
               </div>
             </section>
