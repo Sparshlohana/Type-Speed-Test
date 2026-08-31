@@ -33,7 +33,14 @@ type UpgradeId =
   | "fracture"
   | "execute"
   | "rage"
-  | "phoenix";
+  | "phoenix"
+  | "overclock"
+  | "heavy"
+  | "buffer"
+  | "carry"
+  | "cascade"
+  | "anchor"
+  | "prelude";
 
 type UpgradeRarity = "common" | "rare" | "epic" | "legendary";
 
@@ -58,14 +65,21 @@ const UPGRADES: readonly Upgrade[] = [
   { id: "ward", name: "Quiet Ward", description: "Enemy attacks deal 4 less damage.", symbol: "◇", kind: "defense", rarity: "common" },
   { id: "heart", name: "Second Wind", description: "+18 maximum health and fully heal.", symbol: "+", kind: "defense", rarity: "common" },
   { id: "mercy", name: "Soft Landing", description: "Typos cost 1 health instead of 3.", symbol: "∿", kind: "defense", rarity: "common" },
-  { id: "momentum", name: "Combo Crown", description: "Combos add twice as much bonus damage.", symbol: "×", kind: "offense", rarity: "rare" },
+  { id: "momentum", name: "Combo Crown", description: "Combo damage ramps every 2 words instead of 3, and by 3 instead of 2.", symbol: "×", kind: "offense", rarity: "rare" },
   { id: "tempo", name: "Stolen Time", description: "Enemies take 1.2 seconds longer to attack.", symbol: "◷", kind: "utility", rarity: "rare" },
   { id: "leech", name: "Vampiric Script", description: "Every clean word restores 2 health.", symbol: "♥", kind: "defense", rarity: "rare" },
   { id: "rage", name: "Berserker Buffer", description: "+6 word damage while you are at or below half health.", symbol: "!", kind: "offense", rarity: "rare" },
+  { id: "overclock", name: "Overclock", description: "Critical hits land every 5th combo word instead of every 8th.", symbol: "⚡", kind: "offense", rarity: "rare" },
+  { id: "heavy", name: "Heavy Payload", description: "+8 damage on words of 7 characters or more.", symbol: "▮", kind: "offense", rarity: "rare" },
+  { id: "buffer", name: "Buffer Overflow", description: "The first typo in each room costs no health and keeps your combo.", symbol: "⛉", kind: "defense", rarity: "rare" },
+  { id: "carry", name: "Warm Cache", description: "Keep your combo when you walk into the next room.", symbol: "→", kind: "utility", rarity: "rare" },
   { id: "echo", name: "Arcane Echo", description: "Every 4th clean word strikes twice for double damage.", symbol: "Ⅱ", kind: "offense", rarity: "epic" },
   { id: "fracture", name: "Time Fracture", description: "Every clean word pushes the enemy timer back 0.45s.", symbol: "↶", kind: "utility", rarity: "epic" },
   { id: "execute", name: "Execute.exe", description: "Deal double damage while the enemy is below 30% health.", symbol: "⌁", kind: "offense", rarity: "epic" },
+  { id: "cascade", name: "Cascade", description: "Every word deals bonus damage equal to your current combo.", symbol: "≫", kind: "offense", rarity: "epic" },
+  { id: "anchor", name: "Anchor Frame", description: "Enemy attacks no longer cut your combo.", symbol: "⚓", kind: "utility", rarity: "epic" },
   { id: "phoenix", name: "Phoenix Cache", description: "Survive one lethal hit and return with 35 health.", symbol: "✦", kind: "defense", rarity: "legendary" },
+  { id: "prelude", name: "Cold Open", description: "Each room starts with 6 extra seconds before the enemy can attack.", symbol: "❄", kind: "utility", rarity: "legendary" },
 ] as const;
 
 const RARITY_META: Record<UpgradeRarity, { label: string; color: string; soft: string }> = {
@@ -106,8 +120,9 @@ function weightedUpgrade(pool: readonly Upgrade[], clearedRoom: number): Upgrade
 }
 
 function pickRewards(owned: readonly UpgradeId[], clearedRoom: number): Upgrade[] {
-  const available = UPGRADES.filter((upgrade) => !owned.includes(upgrade.id));
-  const pool = available.length >= 3 ? available : [...UPGRADES];
+  // Never offer something already owned: picking it would burn the whole reward
+  // for nothing but the consolation heal.
+  const pool = UPGRADES.filter((upgrade) => !owned.includes(upgrade.id));
   const bossPrep = clearedRoom >= ENEMIES.length - 2;
   const offensePool = pool.filter((upgrade) =>
     upgrade.kind === "offense" && (!bossPrep || upgrade.rarity === "epic"),
@@ -177,6 +192,7 @@ export function TypeRaidGame() {
   const [rewards, setRewards] = useState<Upgrade[]>([]);
   const [bestScore, setBestScore] = useState(0);
   const [phoenixUsed, setPhoenixUsed] = useState(false);
+  const [bufferUsed, setBufferUsed] = useState(false);
   const [enemyHurt, setEnemyHurt] = useState(false);
   const [playerHurt, setPlayerHurt] = useState(false);
   const [floatText, setFloatText] = useState<string | null>(null);
@@ -186,11 +202,14 @@ export function TypeRaidGame() {
   const enemy = ENEMIES[room];
   const bonusDamage = owned.includes("blade") ? 4 : 0;
   const armor = owned.includes("ward") ? 4 : 0;
-  const comboScale = owned.includes("momentum") ? 2 : 1;
+  const comboStep = owned.includes("momentum") ? 2 : 3;
+  const comboScale = owned.includes("momentum") ? 3 : 2;
+  const critEvery = owned.includes("overclock") ? 5 : 8;
   const attackBonus = owned.includes("tempo") ? 1_200 : 0;
   const typoDamage = owned.includes("mercy") ? 1 : 3;
   const rageDamage = owned.includes("rage") && hp <= maxHp / 2 ? 6 : 0;
   const target = words[wordIndex] ?? words[0];
+  const heavyDamage = owned.includes("heavy") && target.length >= 7 ? 8 : 0;
   const nextWords = words.slice(wordIndex + 1, wordIndex + 4);
   const accuracy = wordsTyped + errors === 0 ? 100 : (wordsTyped / (wordsTyped + errors)) * 100;
   const wpm = elapsedMs > 0 ? Math.round((wordsTyped * 60_000) / elapsedMs) : 0;
@@ -211,9 +230,14 @@ export function TypeRaidGame() {
     window.setTimeout(() => inputRef.current?.focus(), 0);
   }, []);
 
+  const roomStartTimer = useCallback((roomIndex: number, ids: readonly UpgradeId[]) =>
+    ENEMIES[roomIndex].attackMs
+      + (ids.includes("tempo") ? 1_200 : 0)
+      + (ids.includes("prelude") ? 6_000 : 0), []);
+
   const resetAttack = useCallback((roomIndex: number, ids: readonly UpgradeId[] = owned) => {
-    setAttackLeft(ENEMIES[roomIndex].attackMs + (ids.includes("tempo") ? 1_200 : 0));
-  }, [owned]);
+    setAttackLeft(roomStartTimer(roomIndex, ids));
+  }, [owned, roomStartTimer]);
 
   const startRun = useCallback(() => {
     effectTimers.current.forEach(window.clearTimeout);
@@ -235,6 +259,7 @@ export function TypeRaidGame() {
     setRewards([]);
     setElapsedMs(0);
     setPhoenixUsed(false);
+    setBufferUsed(false);
     setAttackLeft(first.attackMs);
     setPhase("briefing");
   }, []);
@@ -265,12 +290,13 @@ export function TypeRaidGame() {
 
   const completeWord = useCallback(() => {
     const nextCombo = combo + 1;
-    const comboDamage = Math.floor(nextCombo / 3) * 2 * comboScale;
-    const critical = nextCombo > 0 && nextCombo % 8 === 0;
+    const comboDamage = Math.floor(nextCombo / comboStep) * comboScale;
+    const cascadeDamage = owned.includes("cascade") ? nextCombo : 0;
+    const critical = nextCombo > 0 && nextCombo % critEvery === 0;
     const echoStrike = owned.includes("echo") && (wordsTyped + 1) % 4 === 0;
     const executeStrike = owned.includes("execute") && enemyHp <= enemy.hp * 0.3;
     const multiplier = (critical ? 2 : 1) * (echoStrike ? 2 : 1) * (executeStrike ? 2 : 1);
-    const damage = (10 + bonusDamage + comboDamage + rageDamage) * multiplier;
+    const damage = (10 + bonusDamage + comboDamage + cascadeDamage + heavyDamage + rageDamage) * multiplier;
     const remaining = Math.max(0, enemyHp - damage);
     const nextScore = score + damage * 12 + nextCombo * 5 + room * 40;
 
@@ -283,7 +309,7 @@ export function TypeRaidGame() {
       setHp((current) => Math.min(maxHp, current + 2));
     }
     if (owned.includes("fracture") && remaining > 0) {
-      setAttackLeft((current) => Math.min(enemy.attackMs + attackBonus, current + 450));
+      setAttackLeft((current) => Math.max(current, Math.min(enemy.attackMs + attackBonus, current + 450)));
     }
     setTyped("");
     setWordIndex((current) => {
@@ -295,10 +321,16 @@ export function TypeRaidGame() {
     flash("enemy", hitLabel);
     if (settings.sound) playSound("key");
     if (remaining === 0) completeRoom(nextScore);
-  }, [attackBonus, bonusDamage, combo, comboScale, completeRoom, enemy.attackMs, enemy.difficulty, enemy.hp, enemyHp, flash, maxHp, owned, rageDamage, room, score, settings.sound, words.length, wordsTyped]);
+  }, [attackBonus, bonusDamage, combo, comboScale, comboStep, completeRoom, critEvery, enemy.attackMs, enemy.difficulty, enemy.hp, enemyHp, flash, heavyDamage, maxHp, owned, rageDamage, room, score, settings.sound, words.length, wordsTyped]);
 
   const registerTypo = useCallback(() => {
     setErrors((current) => current + 1);
+    if (owned.includes("buffer") && !bufferUsed) {
+      setBufferUsed(true);
+      flash("player", "ABSORBED");
+      if (settings.sound) playSound("error");
+      return;
+    }
     setCombo(0);
     setScore((current) => Math.max(0, current - 20));
     setHp((current) => {
@@ -315,7 +347,7 @@ export function TypeRaidGame() {
       flash("player", `-${typoDamage}`);
     }
     if (settings.sound) playSound("error");
-  }, [finishRun, flash, hp, maxHp, owned, phoenixUsed, score, settings.sound, typoDamage]);
+  }, [bufferUsed, finishRun, flash, hp, maxHp, owned, phoenixUsed, score, settings.sound, typoDamage]);
 
   const handleKey = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
@@ -355,7 +387,8 @@ export function TypeRaidGame() {
     const nextEnemy = ENEMIES[nextRoom];
     setRoom(nextRoom);
     setEnemyHp(nextEnemy.hp);
-    setCombo(0);
+    if (!nextOwned.includes("carry")) setCombo(0);
+    setBufferUsed(false);
     setTyped("");
     setWordIndex(0);
     setWords(generateWords(WORD_BATCH, nextEnemy.difficulty));
@@ -393,7 +426,7 @@ export function TypeRaidGame() {
           if (nextHp === 0) finishRun("defeat", score);
           return nextHp;
         });
-        setCombo((current) => Math.floor(current / 2));
+        if (!owned.includes("anchor")) setCombo((current) => Math.floor(current / 2));
         if (!(owned.includes("phoenix") && !phoenixUsed && hp <= incoming)) {
           flash("player", `-${incoming}`);
         }
@@ -421,8 +454,11 @@ export function TypeRaidGame() {
   const attackPercent = clamp((attackLeft / (enemy.attackMs + attackBonus)) * 100, 0, 100);
   const nextEcho = owned.includes("echo") && (wordsTyped + 1) % 4 === 0;
   const nextExecute = owned.includes("execute") && enemyHp <= enemy.hp * 0.3;
-  const nextWordMultiplier = (nextEcho ? 2 : 1) * (nextExecute ? 2 : 1);
-  const nextWordDamage = (10 + bonusDamage + rageDamage + Math.floor((combo + 1) / 3) * 2 * comboScale) * nextWordMultiplier;
+  const nextCrit = (combo + 1) % critEvery === 0;
+  const nextWordMultiplier = (nextEcho ? 2 : 1) * (nextExecute ? 2 : 1) * (nextCrit ? 2 : 1);
+  const nextWordDamage = (10 + bonusDamage + rageDamage + heavyDamage
+    + (owned.includes("cascade") ? combo + 1 : 0)
+    + Math.floor((combo + 1) / comboStep) * comboScale) * nextWordMultiplier;
   const runStats = useMemo(() => [
     { label: "Score", value: score.toLocaleString() },
     { label: "Combo", value: `${combo}×` },
