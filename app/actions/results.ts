@@ -118,6 +118,15 @@ export async function listResults(limit = 200): Promise<StoredResult[]> {
   return docs.map(fromDocument);
 }
 
+/** Fetch the heavy per-second samples only when a user opens one result. */
+export async function getResultDetails(clientId: unknown): Promise<StoredResult | null> {
+  const user = await requireUser();
+  if (typeof clientId !== "string" || clientId.length < 1 || clientId.length > 128) return null;
+  const { results } = await collections();
+  const doc = await results.findOne({ userId: user.id, clientId });
+  return doc ? fromDocument(doc) : null;
+}
+
 export async function clearResults(): Promise<void> {
   const user = await requireUser();
   const { results } = await collections();
