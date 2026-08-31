@@ -393,7 +393,7 @@ export function TypeRaidGame() {
           if (nextHp === 0) finishRun("defeat", score);
           return nextHp;
         });
-        setCombo(0);
+        setCombo((current) => Math.floor(current / 2));
         if (!(owned.includes("phoenix") && !phoenixUsed && hp <= incoming)) {
           flash("player", `-${incoming}`);
         }
@@ -540,7 +540,7 @@ export function TypeRaidGame() {
                       <span className="font-mono text-sm font-bold text-raid-danger">{Math.max(0, attackLeft / 1000).toFixed(1)}s</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-white/[.06]"><div className="h-full bg-[#ff5c7a] shadow-[0_0_14px_rgba(255,92,122,.55)] transition-[width] duration-100" style={{ width: `${attackPercent}%` }} /></div>
-                    <p className="mt-2 text-[10px] text-white/36">When it reaches zero, {enemy.name} deals <strong className="text-white/65">{Math.max(1, enemy.damage - armor)} damage</strong> and your combo resets.</p>
+                    <p className="mt-2 text-[10px] text-white/36">When it reaches zero, {enemy.name} deals <strong className="text-white/65">{Math.max(1, enemy.damage - armor)} damage</strong> and cuts your combo in half.</p>
                   </div>
                 </div>
               </div>
@@ -623,7 +623,7 @@ export function TypeRaidGame() {
                     {[
                       ["1", "Type the large word", "Press its letters exactly as shown. It attacks automatically when the last letter is typed—do not press Space or Enter."],
                       ["2", "Build a combo", "Each clean word deals at least 10 damage. Consecutive words increase your combo and unlock stronger hits."],
-                      ["3", "Beat the red timer", `The enemy attacks whenever its red timer empties. A wrong key also costs ${typoDamage} HP and resets your combo.`],
+                      ["3", "Beat the red timer", `An attack halves your combo. A wrong key costs ${typoDamage} HP and resets it entirely.`],
                     ].map(([number, title, body]) => (
                       <li key={number} className="flex gap-4 rounded-2xl border border-white/[.07] bg-white/[.025] p-4">
                         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#9b7cff]/12 font-mono text-sm font-bold text-raid-accent">{number}</span>
