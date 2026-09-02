@@ -180,6 +180,7 @@ export async function clearResults(): Promise<void> {
     personalBests,
     userTypingAnalytics,
     userProgress,
+    gamePersonalBests,
     dailyChallengeResults,
   } = await collections();
   const writes = await Promise.all([
@@ -188,6 +189,7 @@ export async function clearResults(): Promise<void> {
     personalBests.deleteMany({ userId: user.id }),
     userTypingAnalytics.deleteMany({ userId: user.id }),
     userProgress.deleteMany({ userId: user.id }),
+    gamePersonalBests.deleteMany({ userId: user.id }),
     dailyChallengeResults.deleteMany({ userId: user.id }),
   ]);
   if (writes.some((write) => write.deletedCount > 0)) updateTag(LEADERBOARD_CACHE_TAG);

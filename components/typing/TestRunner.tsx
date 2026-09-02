@@ -68,7 +68,7 @@ export function TestRunner({
           </div>
         ) : null}
 
-        <div className="col-start-1 row-start-1">
+        <div className="pointer-events-none col-start-1 row-start-1">
           <LiveStats live={live} visible={state.status === "running"} />
         </div>
       </div>

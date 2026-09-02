@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { saveGameRun } from "@/app/actions/games";
 import { useSettings } from "@/hooks/useSettings";
 import { playSound } from "@/lib/sound";
 import { generateWords, type Difficulty } from "@/lib/words";
@@ -98,6 +99,12 @@ const RARITY_WEIGHTS: readonly Record<UpgradeRarity, number>[] = [
 const BEST_KEY = "typeflow.typeraid.best";
 const WORD_BATCH = 32;
 
+function createRunId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `raid-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
@@ -191,6 +198,8 @@ export function TypeRaidGame() {
   const [owned, setOwned] = useState<UpgradeId[]>([]);
   const [rewards, setRewards] = useState<Upgrade[]>([]);
   const [bestScore, setBestScore] = useState(0);
+  const [runId, setRunId] = useState("");
+  const [submission, setSubmission] = useState<"idle" | "saving" | "saved" | "best" | "error">("idle");
   const [phoenixUsed, setPhoenixUsed] = useState(false);
   const [bufferUsed, setBufferUsed] = useState(false);
   const [enemyHurt, setEnemyHurt] = useState(false);
@@ -198,6 +207,7 @@ export function TypeRaidGame() {
   const [floatText, setFloatText] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const effectTimers = useRef<number[]>([]);
+  const submittedRuns = useRef(new Set<string>());
 
   const enemy = ENEMIES[room];
   const bonusDamage = owned.includes("blade") ? 4 : 0;
@@ -248,6 +258,8 @@ export function TypeRaidGame() {
     setMaxHp(100);
     setEnemyHp(first.hp);
     setScore(0);
+    setRunId(createRunId());
+    setSubmission("idle");
     setCombo(0);
     setBestCombo(0);
     setWordsTyped(0);
@@ -440,6 +452,26 @@ export function TypeRaidGame() {
   useEffect(() => {
     if (phase === "battle") focusInput();
   }, [focusInput, phase]);
+
+  useEffect(() => {
+    if ((phase !== "victory" && phase !== "defeat") || !runId || submittedRuns.current.has(runId)) return;
+    submittedRuns.current.add(runId);
+    setSubmission("saving");
+    void saveGameRun({
+      clientId: runId,
+      gameId: "typeraid",
+      score: Math.max(0, Math.round(score)),
+      wpm: Math.max(0, Math.round(wpm)),
+      accuracy,
+      words: wordsTyped,
+      bestCombo,
+      roomsCleared: phase === "victory" ? ENEMIES.length : room,
+      outcome: phase,
+      durationMs: Math.round(elapsedMs),
+    })
+      .then((response) => setSubmission(response.ok ? response.isPersonalBest ? "best" : "saved" : "error"))
+      .catch(() => setSubmission("error"));
+  }, [accuracy, bestCombo, elapsedMs, phase, room, runId, score, wordsTyped, wpm]);
 
   useEffect(() => {
     const modalOpen = phase === "paused" || phase === "reward" || phase === "victory" || phase === "defeat";
@@ -773,6 +805,9 @@ export function TypeRaidGame() {
               <p className={`mt-7 text-[10px] font-semibold uppercase tracking-[0.22em] ${phase === "victory" ? "text-raid-success" : "text-raid-danger"}`}>{phase === "victory" ? "Raid complete" : `Fallen in room ${room + 1}`}</p>
               <h2 className="mt-2 text-5xl font-bold tracking-[-0.06em] sm:text-6xl">{phase === "victory" ? "The void compiled." : "The void won."}</h2>
               <p className="mt-4 text-sm text-white/38">{phase === "victory" ? "Every enemy defeated. Your keyboard survives another day." : "A cleaner combo might be all that stands between you and the next room."}</p>
+              <p className={`mt-3 text-xs ${submission === "error" ? "text-raid-danger" : submission === "best" ? "text-raid-success" : "text-white/38"}`} role="status">
+                {submission === "saving" ? "Saving your arcade score…" : submission === "best" ? "New personal best · leaderboard updated" : submission === "saved" ? "Run saved to your account" : submission === "error" ? "Score could not be saved. Try another raid." : ""}
+              </p>
               <div className="mt-9 grid grid-cols-4 overflow-hidden rounded-2xl border border-white/[.08] bg-white/[.025]">
                 {[{ label: "Score", value: score.toLocaleString() }, { label: "Words", value: wordsTyped }, { label: "Best combo", value: `${bestCombo}×` }, { label: "Accuracy", value: `${accuracy.toFixed(0)}%` }].map((stat) => (
                   <div key={stat.label} className="border-r border-white/[.07] px-2 py-4 last:border-r-0">
@@ -783,6 +818,7 @@ export function TypeRaidGame() {
               </div>
               <div className="mt-8 flex flex-wrap justify-center gap-3">
                 <button type="button" onClick={startRun} className="rounded-xl bg-[#8a6cff] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#9b81ff]">Raid again</button>
+                <Link href="/leaderboard?game=typeraid" className="rounded-xl border border-white/10 px-6 py-3 text-sm font-semibold text-white/55 transition hover:bg-white/[.05] hover:text-white">View leaderboard</Link>
                 <Link href="/games" className="rounded-xl border border-white/10 px-6 py-3 text-sm font-semibold text-white/55 transition hover:bg-white/[.05] hover:text-white">Back to arcade</Link>
               </div>
             </section>

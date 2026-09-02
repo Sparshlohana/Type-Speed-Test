@@ -7,12 +7,22 @@ import { Segmented, type SegmentOption } from "@/components/ui/Segmented";
 import { LoadingStatus, Skeleton } from "@/components/ui/Skeleton";
 import { modeKey, modeLabel, type Difficulty, type Mode } from "@/lib/engine";
 import { initialsOf, round } from "@/lib/format";
-import type { LeaderboardEntry } from "@/lib/leaderboard";
+import type { GameLeaderboardEntry, LeaderboardEntry } from "@/lib/leaderboard";
 import type { QuoteLength } from "@/lib/words";
 
 type BoardKind = "time" | "words" | "quote";
+type BoardCategory = "tests" | "games";
 type TimeOption = "15" | "30" | "60" | "custom";
-type Board = { entries: LeaderboardEntry[]; yourRank: number | null };
+type Board = { entries: LeaderboardEntry[] | GameLeaderboardEntry[]; yourRank: number | null };
+
+const CATEGORY_OPTIONS: SegmentOption<BoardCategory>[] = [
+  { value: "tests", label: "Typing tests" },
+  { value: "games", label: "Games" },
+];
+
+const GAME_OPTIONS: SegmentOption<"typeraid">[] = [
+  { value: "typeraid", label: "TypeRaid" },
+];
 
 const TYPE_OPTIONS: SegmentOption<BoardKind>[] = [
   { value: "time", label: "Timed" },
@@ -54,6 +64,8 @@ function FilterLabel({ children }: { children: React.ReactNode }) {
 }
 
 export default function LeaderboardPage() {
+  const [category, setCategory] = useState<BoardCategory>("tests");
+  const [gameId, setGameId] = useState<"typeraid">("typeraid");
   const [kind, setKind] = useState<BoardKind>("time");
   const [timeOption, setTimeOption] = useState<TimeOption>("30");
   const [customSeconds, setCustomSeconds] = useState(45);
@@ -79,8 +91,17 @@ export default function LeaderboardPage() {
   const selected = modeKey(mode);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("game") === "typeraid") {
+      queueMicrotask(() => setCategory("games"));
+    }
+  }, []);
+
+  useEffect(() => {
     const controller = new AbortController();
-    void fetch(`/api/leaderboard?modeKey=${encodeURIComponent(selected)}`, {
+    const query = category === "games"
+      ? `gameId=${encodeURIComponent(gameId)}`
+      : `modeKey=${encodeURIComponent(selected)}`;
+    void fetch(`/api/leaderboard?${query}`, {
       signal: controller.signal,
       cache: "no-store",
     })
@@ -101,7 +122,7 @@ export default function LeaderboardPage() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [selected]);
+  }, [category, gameId, selected]);
 
   const prepareChange = () => {
     setLoading(true);
@@ -130,14 +151,30 @@ export default function LeaderboardPage() {
         ) : (
           <p className="mt-1 text-sm text-sub">
             {board.yourRank
-              ? `You're ranked #${board.yourRank} for ${modeLabel(mode)}.`
-              : `Finish a ${modeLabel(mode)} test while signed in to take a place on this board.`}
+              ? `You're ranked #${board.yourRank} for ${category === "games" ? "TypeRaid" : modeLabel(mode)}.`
+              : category === "games"
+                ? "Finish a TypeRaid run to take a place on this board."
+                : `Finish a ${modeLabel(mode)} test while signed in to take a place on this board.`}
           </p>
         )}
       </header>
 
       <section className="mt-6 rounded-xl border border-border bg-surface p-4">
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="mb-4 border-b border-border/70 pb-4">
+          <FilterLabel>Leaderboard category</FilterLabel>
+          <Segmented
+            options={CATEGORY_OPTIONS}
+            value={category}
+            onChange={(value) => {
+              prepareChange();
+              setCategory(value);
+            }}
+            ariaLabel="Leaderboard category"
+            size="sm"
+          />
+        </div>
+
+        {category === "tests" ? <div className="grid gap-4 lg:grid-cols-3">
           <div className="overflow-x-auto pb-1">
             <FilterLabel>Test type</FilterLabel>
             <Segmented
@@ -233,14 +270,37 @@ export default function LeaderboardPage() {
               Quote difficulty is separated by length.
             </div>
           )}
-        </div>
+        </div> : (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <FilterLabel>Game</FilterLabel>
+              <Segmented
+                options={GAME_OPTIONS}
+                value={gameId}
+                onChange={(value) => {
+                  prepareChange();
+                  setGameId(value);
+                }}
+                ariaLabel="Game leaderboard"
+                size="sm"
+              />
+            </div>
+            <p className="max-w-md text-xs leading-5 text-sub">
+              Each player&apos;s best run is ranked by score, then accuracy, then completion time.
+            </p>
+          </div>
+        )}
 
         <div className="mt-4 flex flex-col gap-1 border-t border-border/70 pt-3 text-xs text-sub sm:flex-row sm:items-center sm:justify-between">
           <span>
-            Viewing <strong className="font-medium text-text">{modeLabel(mode)}</strong> only
+            Viewing <strong className="font-medium text-text">{category === "games" ? "TypeRaid" : modeLabel(mode)}</strong>
           </span>
           <span>
-            <Link href="/daily" className="transition-colors hover:text-accent">Daily</Link> has its own board · Adaptive practice is personal
+            {category === "games" ? (
+              <Link href="/games/typeraid" className="transition-colors hover:text-accent">Play TypeRaid →</Link>
+            ) : (
+              <><Link href="/daily" className="transition-colors hover:text-accent">Daily</Link> has its own board · Adaptive practice is personal</>
+            )}
           </span>
         </div>
       </section>
@@ -269,10 +329,51 @@ export default function LeaderboardPage() {
             </p>
             <p className="mt-1 text-xs text-sub">
               {unavailable
-                ? "Your typing tests still save locally."
-                : `Sign in and finish a ${modeLabel(mode)} test to claim the first spot.`}
+                ? category === "games" ? "Completed runs still remain playable." : "Your typing tests still save locally."
+                : category === "games"
+                  ? "Finish a TypeRaid run to claim the first spot."
+                  : `Sign in and finish a ${modeLabel(mode)} test to claim the first spot.`}
             </p>
           </div>
+        ) : category === "games" ? (
+          <table className="w-full min-w-[620px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.14em] text-sub">
+                <th className="px-5 py-3 font-medium">Rank</th>
+                <th className="px-5 py-3 font-medium">Player</th>
+                <th className="px-5 py-3 text-right font-medium">Score</th>
+                <th className="px-5 py-3 text-right font-medium">Rooms</th>
+                <th className="px-5 py-3 text-right font-medium">Accuracy</th>
+                <th className="px-5 py-3 text-right font-medium">WPM</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(board.entries as GameLeaderboardEntry[]).map((entry, index) => (
+                <tr key={entry.id} className={`border-b border-border/60 transition-colors duration-200 ease-[var(--ease)] last:border-0 hover:bg-surface-hover ${entry.isYou ? "bg-accent-soft" : ""}`}>
+                  <td className="px-5 py-3">
+                    <span className={`font-mono tabular-nums ${index < 3 ? "text-accent" : "text-sub"}`}>{index + 1}</span>
+                  </td>
+                  <td className="px-5 py-3">
+                    <span className="flex items-center gap-3">
+                      <span aria-hidden className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-semibold ${entry.isYou ? "bg-accent text-white" : "border border-border bg-bg text-sub"}`} style={entry.image ? { backgroundImage: `url(${entry.image})`, backgroundPosition: "center", backgroundSize: "cover" } : undefined}>
+                        {entry.image ? null : initialsOf(entry.username)}
+                      </span>
+                      <span>
+                        <span className="text-text">{entry.username}{entry.isYou ? <span className="ml-2 text-xs text-accent">you</span> : null}</span>
+                        <span className="block text-[10px] text-sub">{entry.attempts} run{entry.attempts === 1 ? "" : "s"}</span>
+                      </span>
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 text-right font-mono font-semibold tabular-nums text-text">{entry.score.toLocaleString()}</td>
+                  <td className="px-5 py-3 text-right font-mono tabular-nums text-sub">
+                    {entry.roomsCleared}/4{entry.outcome === "victory" ? <span className="ml-1 text-accent">✓</span> : null}
+                  </td>
+                  <td className="px-5 py-3 text-right font-mono tabular-nums text-sub">{round(entry.accuracy, 1)}%</td>
+                  <td className="px-5 py-3 text-right font-mono tabular-nums text-sub">{entry.wpm}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         ) : (
           <table className="w-full min-w-[520px] border-collapse text-sm">
             <thead>
@@ -285,7 +386,7 @@ export default function LeaderboardPage() {
               </tr>
             </thead>
             <tbody>
-              {board.entries.map((entry, index) => (
+              {(board.entries as LeaderboardEntry[]).map((entry, index) => (
                 <tr
                   key={entry.id}
                   className={`border-b border-border/60 transition-colors duration-200 ease-[var(--ease)] last:border-0 hover:bg-surface-hover ${entry.isYou ? "bg-accent-soft" : ""}`}

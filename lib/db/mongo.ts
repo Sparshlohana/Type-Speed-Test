@@ -67,6 +67,27 @@ export type UserProgressDoc = {
   updatedAt: Date;
 };
 
+export type GamePersonalBestDoc = {
+  _id: ObjectId;
+  userId: string;
+  gameId: "typeraid";
+  clientId: string;
+  username: string;
+  image: string | null;
+  score: number;
+  wpm: number;
+  accuracy: number;
+  words: number;
+  bestCombo: number;
+  roomsCleared: number;
+  outcome: "victory" | "defeat";
+  durationMs: number;
+  attempts: number;
+  processedRunIds: string[];
+  achievedAt: number;
+  updatedAt: Date;
+};
+
 export type DailyChallengeDoc = {
   _id: ObjectId;
   challengeId: string;
@@ -109,6 +130,7 @@ export async function collections(): Promise<{
   personalBests: Collection<PersonalBestDoc>;
   userTypingAnalytics: Collection<UserTypingAnalyticsDoc>;
   userProgress: Collection<UserProgressDoc>;
+  gamePersonalBests: Collection<GamePersonalBestDoc>;
   dailyChallengeResults: Collection<DailyChallengeDoc>;
 }> {
   const db = await getDb();
@@ -118,6 +140,7 @@ export async function collections(): Promise<{
     personalBests: db.collection<PersonalBestDoc>("personal_bests"),
     userTypingAnalytics: db.collection<UserTypingAnalyticsDoc>("user_typing_analytics"),
     userProgress: db.collection<UserProgressDoc>("user_progress"),
+    gamePersonalBests: db.collection<GamePersonalBestDoc>("game_personal_bests"),
     dailyChallengeResults: db.collection<DailyChallengeDoc>("daily_challenge_results"),
   };
 }

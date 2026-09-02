@@ -30,7 +30,7 @@ export function LiveStats({ live, visible }: { live: LiveStatsValue; visible: bo
     <div
       aria-live="polite"
       aria-atomic="true"
-      className="flex items-center justify-center gap-6 transition-opacity duration-300 ease-[var(--ease)] sm:gap-10"
+      className="pointer-events-none flex items-center justify-center gap-6 transition-opacity duration-300 ease-[var(--ease)] sm:gap-10"
       style={{ opacity: visible ? 1 : 0 }}
     >
       <Stat label="WPM" accent>
