@@ -5,6 +5,7 @@ import { useState } from "react";
 import { clearResults } from "@/app/actions/results";
 import { Button } from "@/components/ui/Button";
 import { Segmented } from "@/components/ui/Segmented";
+import { LoadingStatus, Skeleton } from "@/components/ui/Skeleton";
 import { Toast } from "@/components/ui/Toast";
 import { Toggle } from "@/components/ui/Toggle";
 import { useSettings } from "@/hooks/useSettings";
@@ -60,8 +61,9 @@ function Row({
 
 export default function SettingsPage() {
   const { settings, update, reset } = useSettings();
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
   const [confirmingReset, setConfirmingReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const handleReset = async () => {
@@ -73,12 +75,15 @@ export default function SettingsPage() {
     reset();
     setConfirmingReset(false);
     if (session?.user) {
+      setResetting(true);
       try {
         await clearResults();
         resultsStore.setServerResults([]);
         setToast("All local and account data cleared");
       } catch {
         setToast("Local data cleared, but account data could not be cleared");
+      } finally {
+        setResetting(false);
       }
     } else {
       setToast("All local data cleared");
@@ -185,12 +190,20 @@ export default function SettingsPage() {
         <Row
           title="Username"
           description={
-            session?.user
+            isPending
+              ? "Checking your account details."
+              : session?.user
               ? "Your name and email come from your Google account."
               : "Shown in your local avatar."
           }
         >
-          {session?.user ? (
+          {isPending ? (
+            <div className="w-48 space-y-2">
+              <LoadingStatus label="Loading account details" />
+              <Skeleton className="ml-auto h-4 w-28" />
+              <Skeleton className="ml-auto h-3 w-40" />
+            </div>
+          ) : session?.user ? (
             <div className="text-right">
               <p className="text-sm font-medium text-text">{session.user.name}</p>
               <p className="text-xs text-sub">{session.user.email}</p>
@@ -220,8 +233,13 @@ export default function SettingsPage() {
               Cancel
             </Button>
           ) : null}
-          <Button variant="danger" onClick={handleReset}>
-            {confirmingReset ? "Yes, delete everything" : "Reset"}
+          <Button variant="danger" onClick={handleReset} disabled={resetting || isPending}>
+            {resetting ? (
+              <>
+                <LoadingStatus label="Deleting account data" />
+                <Skeleton className="h-4 w-28 bg-[color-mix(in_srgb,var(--error)_18%,var(--surface))]" />
+              </>
+            ) : confirmingReset ? "Yes, delete everything" : "Reset"}
           </Button>
         </div>
       </div>

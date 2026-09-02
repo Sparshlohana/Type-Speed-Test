@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 
 import { Caret, GhostCaret, type CaretPosition } from "./Caret";
 import { Word } from "./Word";
+import { LoadingStatus, Skeleton } from "@/components/ui/Skeleton";
 import type { GhostRaceState } from "@/hooks/useTypingTest";
 import { typedAt, type TestState } from "@/lib/engine";
 import type { CaretStyle } from "@/lib/storage";
@@ -273,7 +274,10 @@ export function TypingArea({
           ) : ghost.status === "empty" ? (
             <span>Complete this mode once to create a ghost</span>
           ) : ghost.status === "loading" ? (
-            <span>Loading ghost…</span>
+            <span className="inline-flex items-center gap-2">
+              <LoadingStatus label="Loading ghost opponent" />
+              <Skeleton className="h-2.5 w-28" />
+            </span>
           ) : (
             <span>Ghost unavailable</span>
           )}

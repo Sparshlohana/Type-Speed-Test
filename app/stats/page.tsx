@@ -8,6 +8,7 @@ import { LineChart, type Series } from "@/components/charts/LineChart";
 import { Button } from "@/components/ui/Button";
 import { StatTile } from "@/components/ui/Card";
 import { Segmented } from "@/components/ui/Segmented";
+import { LoadingStatus, Skeleton } from "@/components/ui/Skeleton";
 import { modeLabel } from "@/lib/engine";
 import { formatDuration, formatRelativeTime, round } from "@/lib/format";
 import { mean } from "@/lib/metrics";
@@ -63,6 +64,33 @@ function practiceStreak(results: readonly StoredResult[], now: number): number {
 function deltaLabel(value: number, suffix = ""): string {
   const rounded = round(value, 1);
   return `${rounded > 0 ? "+" : ""}${rounded}${suffix}`;
+}
+
+function StatsPageSkeleton() {
+  return (
+    <div className="mx-auto w-full max-w-6xl px-5 py-10 sm:py-14">
+      <LoadingStatus label="Loading your statistics" />
+      <Skeleton className="h-7 w-44" />
+      <Skeleton className="mt-2 h-4 w-72 max-w-full" />
+      <Skeleton className="mt-6 h-20 w-full rounded-xl" />
+      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        {Array.from({ length: 6 }, (_, index) => (
+          <div key={index} className="rounded-xl border border-border bg-surface p-5">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="mt-3 h-8 w-16" />
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 rounded-xl border border-border bg-surface p-5">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="mt-5 h-64 w-full rounded-lg" />
+      </div>
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Skeleton className="h-52 rounded-xl" />
+        <Skeleton className="h-52 rounded-xl" />
+      </div>
+    </div>
+  );
 }
 
 export default function StatsPage() {
@@ -237,7 +265,7 @@ export default function StatsPage() {
   };
 
   if (!hydrated) {
-    return <div className="mx-auto w-full max-w-6xl px-5 py-14 text-sm text-sub">Loading…</div>;
+    return <StatsPageSkeleton />;
   }
 
   if (results.length === 0) {
@@ -284,11 +312,16 @@ export default function StatsPage() {
     <div className="mx-auto w-full max-w-6xl px-5 py-10 sm:py-14">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight text-text">Your statistics</h1>
-        <p className="mt-1 text-sm text-sub">
-          {syncing
-            ? "Syncing your results…"
-            : `${source === "server" ? "Synced" : "Stored on this device"} across ${results.length} tests.`}
-        </p>
+        {syncing ? (
+          <div className="mt-2">
+            <LoadingStatus label="Syncing your results" />
+            <Skeleton className="h-4 w-52" />
+          </div>
+        ) : (
+          <p className="mt-1 text-sm text-sub">
+            {`${source === "server" ? "Synced" : "Stored on this device"} across ${results.length} tests.`}
+          </p>
+        )}
       </header>
 
       <section className="mt-6 flex flex-col gap-4 rounded-xl border border-border bg-surface p-4 lg:flex-row lg:items-center lg:justify-between">
@@ -486,7 +519,14 @@ export default function StatsPage() {
                 <div className="rounded-lg border border-border bg-bg p-4">
                   <h3 className="mb-3 text-xs font-medium text-text">Speed during this test</h3>
                   {detailLoading ? (
-                    <div className="grid h-56 place-items-center text-xs text-sub">Loading test samples…</div>
+                    <div className="h-56 pt-2">
+                      <LoadingStatus label="Loading test samples" />
+                      <div className="flex h-full items-end gap-2 border-b border-l border-border px-3 pb-3">
+                        {[42, 64, 52, 76, 58, 84, 70, 88, 74, 92, 80, 86].map((height, index) => (
+                          <Skeleton key={index} className="flex-1 rounded-t-sm" style={{ height: `${height}%` }} />
+                        ))}
+                      </div>
+                    </div>
                   ) : (
                     <LineChart series={detailSeries} height={230} xLabel="seconds" yLabel="words per minute" xFormat={(value) => `${Math.round(value)}s`} />
                   )}

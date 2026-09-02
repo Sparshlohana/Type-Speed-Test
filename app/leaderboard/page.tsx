@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { Segmented, type SegmentOption } from "@/components/ui/Segmented";
+import { LoadingStatus, Skeleton } from "@/components/ui/Skeleton";
 import { modeKey, modeLabel, type Difficulty, type Mode } from "@/lib/engine";
 import { initialsOf, round } from "@/lib/format";
 import type { LeaderboardEntry } from "@/lib/leaderboard";
@@ -121,11 +122,18 @@ export default function LeaderboardPage() {
     <div className="mx-auto w-full max-w-4xl px-5 py-10 sm:py-14">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight text-text">Leaderboard</h1>
-        <p className="mt-1 text-sm text-sub">
-          {board.yourRank
-            ? `You're ranked #${board.yourRank} for ${modeLabel(mode)}.`
-            : `Finish a ${modeLabel(mode)} test while signed in to take a place on this board.`}
-        </p>
+        {loading ? (
+          <div className="mt-2">
+            <LoadingStatus label="Loading your leaderboard standing" />
+            <Skeleton className="h-4 w-full max-w-lg" />
+          </div>
+        ) : (
+          <p className="mt-1 text-sm text-sub">
+            {board.yourRank
+              ? `You're ranked #${board.yourRank} for ${modeLabel(mode)}.`
+              : `Finish a ${modeLabel(mode)} test while signed in to take a place on this board.`}
+          </p>
+        )}
       </header>
 
       <section className="mt-6 rounded-xl border border-border bg-surface p-4">
@@ -239,9 +247,19 @@ export default function LeaderboardPage() {
 
       <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-surface">
         {loading ? (
-          <div className="space-y-3 p-5" aria-label="Loading leaderboard">
+          <div className="p-5">
+            <LoadingStatus label="Loading leaderboard" />
             {Array.from({ length: 6 }, (_, index) => (
-              <div key={index} className="h-10 animate-pulse rounded-lg bg-surface-hover" />
+              <div key={index} className="grid min-w-[480px] grid-cols-[2rem_1fr_3rem_4rem_4rem] items-center gap-4 border-b border-border/60 py-3 last:border-0">
+                <Skeleton className="h-3 w-5" />
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
+                  <Skeleton className={`h-3 ${index % 2 ? "w-24" : "w-32"}`} />
+                </div>
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-full" />
+              </div>
             ))}
           </div>
         ) : board.entries.length === 0 ? (

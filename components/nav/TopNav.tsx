@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 
+import { LoadingStatus, Skeleton } from "@/components/ui/Skeleton";
 import { useSettings } from "@/hooks/useSettings";
 import { signIn, signOut, useSession } from "@/lib/auth-client";
 import { initialsOf } from "@/lib/format";
@@ -25,7 +27,9 @@ export function TopNav() {
   const pathname = usePathname();
   const { settings } = useSettings();
   const { data: session, isPending } = useSession();
+  const [authActionPending, setAuthActionPending] = useState(false);
   const user = session?.user;
+  const accountPending = isPending || authActionPending;
 
   return (
     <>
@@ -60,37 +64,47 @@ export function TopNav() {
           </nav>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={isPending}
-              onClick={() => {
-                if (user) void signOut();
-                else void signIn.social({ provider: "google" });
-              }}
-              className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-sub transition-colors hover:bg-surface hover:text-text disabled:opacity-50"
-            >
-              {user ? "Sign out" : "Sign in"}
-            </button>
-            <Link
-              href="/settings"
-              aria-label={user ? `${user.name}'s profile` : "Your profile"}
-              className="grid h-8 w-8 place-items-center overflow-hidden rounded-full border border-border bg-surface text-[11px] font-semibold text-sub transition-colors duration-200 ease-[var(--ease)] hover:border-accent hover:text-accent"
-              style={
-                user?.image
-                  ? {
-                      backgroundImage: `url(${user.image})`,
-                      backgroundPosition: "center",
-                      backgroundSize: "cover",
-                    }
-                  : undefined
-              }
-            >
-              {user?.image ? (
-                <span className="sr-only">{user.name}</span>
-              ) : (
-                initialsOf(user?.name || settings.username)
-              )}
-            </Link>
+            {accountPending ? (
+              <div className="flex items-center gap-2">
+                <LoadingStatus label="Loading account" />
+                <Skeleton className="h-7 w-14" />
+                <Skeleton className="h-8 w-8 rounded-full" />
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthActionPending(true);
+                    const action = user
+                      ? signOut()
+                      : signIn.social({ provider: "google" });
+                    void action
+                      .catch(() => undefined)
+                      .finally(() => setAuthActionPending(false));
+                  }}
+                  className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-sub transition-colors hover:bg-surface hover:text-text"
+                >
+                  {user ? "Sign out" : "Sign in"}
+                </button>
+                <Link
+                  href="/settings"
+                  aria-label={user ? `${user.name}'s profile` : "Your profile"}
+                  className="grid h-8 w-8 place-items-center overflow-hidden rounded-full border border-border bg-surface text-[11px] font-semibold text-sub transition-colors duration-200 ease-[var(--ease)] hover:border-accent hover:text-accent"
+                  style={
+                    user?.image
+                      ? {
+                          backgroundImage: `url(${user.image})`,
+                          backgroundPosition: "center",
+                          backgroundSize: "cover",
+                        }
+                      : undefined
+                  }
+                >
+                  {user?.image ? <span className="sr-only">{user.name}</span> : initialsOf(user?.name || settings.username)}
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>

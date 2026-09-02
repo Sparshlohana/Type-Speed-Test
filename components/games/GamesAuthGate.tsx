@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
+import { LoadingStatus, Skeleton } from "@/components/ui/Skeleton";
 import { signIn } from "@/lib/auth-client";
 
 function ArcadeLock() {
@@ -82,11 +83,16 @@ export function GamesAuthGate() {
           className="mx-auto mt-8 flex min-h-12 w-full max-w-sm items-center justify-center gap-3 rounded-xl bg-raid-text px-5 py-3 text-sm font-semibold text-raid-bg shadow-[0_12px_35px_-18px_color-mix(in_srgb,var(--raid-text)_50%,transparent)] transition duration-200 hover:-translate-y-0.5 hover:opacity-90 disabled:cursor-wait disabled:opacity-65 disabled:hover:translate-y-0"
         >
           {signingIn ? (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-raid-bg/25 border-t-raid-bg" aria-hidden />
+            <>
+              <LoadingStatus label="Opening Google sign in" />
+              <Skeleton className="h-4 w-32 bg-raid-bg/20" />
+            </>
           ) : (
-            <GoogleMark />
+            <>
+              <GoogleMark />
+              Continue with Google
+            </>
           )}
-          {signingIn ? "Opening sign in…" : "Continue with Google"}
         </button>
 
         {error ? <p className="mt-3 text-xs text-error" role="alert">{error}</p> : null}

@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 
 import { TestRunner } from "@/components/typing/TestRunner";
+import { LoadingStatus, Skeleton } from "@/components/ui/Skeleton";
 import type { FinishedResult } from "@/hooks/useTypingTest";
 import type { Mode } from "@/lib/engine";
 import { resultsStore } from "@/lib/store";
@@ -97,7 +98,29 @@ export default function PracticePage() {
   }, []);
 
   if (!hydrated) {
-    return <div className="mx-auto w-full max-w-5xl px-5 py-14 text-sm text-sub">Loading…</div>;
+    return (
+      <div className="mx-auto w-full max-w-5xl px-5 py-10 sm:py-14">
+        <LoadingStatus label="Loading adaptive practice" />
+        <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
+          <div>
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="mt-3 h-7 w-72 max-w-full" />
+            <Skeleton className="mt-2 h-4 w-80 max-w-full" />
+          </div>
+          <Skeleton className="h-24 rounded-xl" />
+        </div>
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <Skeleton className="h-28 rounded-xl" />
+          <Skeleton className="h-28 rounded-xl" />
+        </div>
+        <div className="mt-10 space-y-3">
+          <Skeleton className="h-8 w-72 max-w-full" />
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-11/12" />
+          <Skeleton className="h-8 w-3/4" />
+        </div>
+      </div>
+    );
   }
 
   return (

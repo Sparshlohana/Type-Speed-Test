@@ -8,6 +8,7 @@ import {
   type DailyBoard,
 } from "@/app/actions/daily";
 import { TestRunner } from "@/components/typing/TestRunner";
+import { LoadingStatus, Skeleton } from "@/components/ui/Skeleton";
 import type { FinishedResult } from "@/hooks/useTypingTest";
 import {
   DAILY_CHALLENGE_TIME_ZONE,
@@ -27,12 +28,14 @@ export default function DailyChallengePage() {
   const [loadingBoard, setLoadingBoard] = useState(true);
   const [boardUnavailable, setBoardUnavailable] = useState(false);
   const [submission, setSubmission] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const mode = useMemo<Mode>(
     () => ({ kind: "daily", challengeId: challenge.id, count: challenge.count }),
     [challenge],
   );
 
   const refreshBoard = useCallback(async () => {
+    setLoadingBoard(true);
     try {
       const next = await getDailyLeaderboard(challenge.id);
       setBoard(next);
@@ -79,6 +82,7 @@ export default function DailyChallengePage() {
     (finished: FinishedResult) => {
       markLocalDailyCompletion(challenge.id);
       setSubmission("Submitting your best attempt…");
+      setSubmitting(true);
       void submitDailyResult(finished.result)
         .then(async (response) => {
           if (!response.ok) {
@@ -94,12 +98,15 @@ export default function DailyChallengePage() {
         })
         .catch(() => {
           setSubmission("Result saved locally; the daily leaderboard is unavailable.");
+        })
+        .finally(() => {
+          setSubmitting(false);
         });
     },
     [challenge.id, refreshBoard],
   );
 
-  const dateLabel = new Intl.DateTimeFormat(undefined, {
+  const dateLabel = new Intl.DateTimeFormat("en-IN", {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -125,16 +132,31 @@ export default function DailyChallengePage() {
           <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-sub">
             Your standing
           </p>
-          <p className="mt-1 font-mono text-2xl font-semibold text-text">
-            {board.yourRank ? `#${board.yourRank}` : "Unranked"}
-          </p>
-          <p className="mt-0.5 text-xs text-sub">Your best attempt today counts.</p>
+          {loadingBoard ? (
+            <div className="mt-2 space-y-2">
+              <LoadingStatus label="Loading your daily standing" />
+              <Skeleton className="h-7 w-20" />
+              <Skeleton className="h-3 w-44" />
+            </div>
+          ) : (
+            <>
+              <p className="mt-1 font-mono text-2xl font-semibold text-text">
+                {board.yourRank ? `#${board.yourRank}` : "Unranked"}
+              </p>
+              <p className="mt-0.5 text-xs text-sub">Your best attempt today counts.</p>
+            </>
+          )}
         </div>
       </div>
 
       {submission ? (
         <div className="mt-5 rounded-lg border border-[color-mix(in_srgb,var(--accent)_30%,var(--border))] bg-accent-soft px-4 py-2.5 text-xs text-text">
-          {submission}
+          {submitting ? (
+            <>
+              <LoadingStatus label="Submitting your daily result" />
+              <Skeleton className="h-4 w-full max-w-xs bg-[color-mix(in_srgb,var(--accent)_22%,var(--surface))]" />
+            </>
+          ) : submission}
         </div>
       ) : null}
 
@@ -162,9 +184,19 @@ export default function DailyChallengePage() {
 
         <div className="mt-4 overflow-x-auto rounded-xl border border-border bg-surface">
           {loadingBoard ? (
-            <div className="space-y-3 p-5" aria-label="Loading daily leaderboard">
+            <div className="p-5">
+              <LoadingStatus label="Loading daily leaderboard" />
               {Array.from({ length: 5 }, (_, index) => (
-                <div key={index} className="h-10 animate-pulse rounded-lg bg-surface-hover" />
+                <div key={index} className="grid min-w-[520px] grid-cols-[2rem_1fr_3rem_4rem_3rem] items-center gap-4 border-b border-border/60 py-3 last:border-0">
+                  <Skeleton className="h-3 w-5" />
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
+                    <Skeleton className={`h-3 ${index % 2 ? "w-20" : "w-28"}`} />
+                  </div>
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-full" />
+                </div>
               ))}
             </div>
           ) : board.entries.length === 0 ? (
