@@ -384,6 +384,27 @@ body {
   animation: typeraid-damage 300ms ease-out both;
 }
 
+/* Keep the pre-fight briefing complete on short laptop viewports. */
+@media (min-width: 1024px) and (max-height: 700px) {
+  .typeraid-briefing-copy > h2 {
+    margin-top: 0.5rem;
+    font-size: 2.5rem;
+  }
+
+  .typeraid-briefing-copy > h2 + p {
+    margin-top: 0.5rem;
+  }
+
+  .typeraid-briefing-copy > ol {
+    margin-top: 0.75rem;
+  }
+
+  .typeraid-briefing-copy > ol + div {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+  }
+}
+
 @keyframes typeraid-enter {
   from { opacity: 0; transform: translateY(18px) scale(0.985); }
   to { opacity: 1; transform: translateY(0) scale(1); }

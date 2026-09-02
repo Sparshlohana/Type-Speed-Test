@@ -442,7 +442,7 @@ export function TypeRaidGame() {
   }, [focusInput, phase]);
 
   useEffect(() => {
-    const modalOpen = phase === "briefing" || phase === "paused" || phase === "reward" || phase === "victory" || phase === "defeat";
+    const modalOpen = phase === "paused" || phase === "reward" || phase === "victory" || phase === "defeat";
     if (!modalOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -467,11 +467,11 @@ export function TypeRaidGame() {
   ], [accuracy, combo, score, wpm]);
 
   return (
-    <div className="typeraid-shell relative isolate min-h-[calc(100vh-4rem)] overflow-hidden bg-raid-bg text-raid-text">
+    <div className="typeraid-shell relative isolate min-h-[calc(100dvh-4rem)] overflow-hidden bg-raid-bg text-raid-text">
       <div aria-hidden className="typeraid-grid absolute inset-0 opacity-35" />
       <div aria-hidden className="absolute left-1/2 top-[-18rem] h-[38rem] w-[48rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,rgba(124,92,255,.22),transparent_68%)]" />
 
-      <div className="relative mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl flex-col px-4 py-5 sm:px-6 sm:py-7">
+      <div className="relative mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-7xl flex-col px-4 py-5 sm:px-6 sm:py-5">
         <header className="flex items-center justify-between gap-4">
           <Link href="/games" className="group flex items-center gap-3 text-white/55 transition-colors hover:text-white">
             <span className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/[.04] transition-transform group-hover:-translate-x-0.5">←</span>
@@ -521,6 +521,94 @@ export function TypeRaidGame() {
                     <p className="mt-1 text-[11px] leading-4 text-white/42">{body}</p>
                   </div>
                 ))}
+              </div>
+            </section>
+          </main>
+        ) : phase === "briefing" ? (
+          <main className="grid flex-1 items-center py-5 sm:py-5">
+            <section className="typeraid-enter grid w-full gap-5 lg:grid-cols-[minmax(0,.9fr)_minmax(0,1.1fr)] lg:gap-10">
+              <div
+                className="relative min-h-[22rem] overflow-hidden rounded-[2rem] border border-white/[.08] bg-[linear-gradient(145deg,color-mix(in_srgb,var(--enemy-color)_14%,transparent),transparent_48%),var(--raid-surface)] p-5 shadow-[0_30px_100px_-50px_var(--enemy-color)] sm:min-h-[25rem] sm:p-7"
+                style={{ "--enemy-color": enemy.color } as React.CSSProperties}
+              >
+                <div aria-hidden className="absolute -left-20 -top-20 h-56 w-56 rounded-full border border-white/[.06]" />
+                <div aria-hidden className="absolute -left-8 -top-8 h-56 w-56 rounded-full border border-white/[.06]" />
+                <div aria-hidden className="absolute inset-x-0 bottom-0 h-40 bg-[linear-gradient(transparent,var(--raid-bg))] opacity-70" />
+
+                <div className="relative z-10 flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-raid-danger">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ff5c7a]" />
+                      Threat detected
+                    </div>
+                    <h2 className="mt-2 text-2xl font-bold tracking-[-0.04em]">{enemy.name}</h2>
+                    <p className="mt-1 text-xs text-white/42">{enemy.title}</p>
+                  </div>
+                  <span className="rounded-full border border-white/[.08] bg-white/[.035] px-3 py-1.5 font-mono text-[10px] font-semibold text-white/55">
+                    ROOM {String(room + 1).padStart(2, "0")} / {String(ENEMIES.length).padStart(2, "0")}
+                  </span>
+                </div>
+
+                <div className="absolute inset-x-0 bottom-20 top-16 flex items-center justify-center sm:bottom-24">
+                  <div aria-hidden className="absolute h-44 w-44 rounded-full border border-[var(--enemy-color)] opacity-20 sm:h-56 sm:w-56" />
+                  <div aria-hidden className="absolute h-32 w-32 rounded-full border border-dashed border-[var(--enemy-color)] opacity-30 sm:h-44 sm:w-44" />
+                  <EnemyAvatar enemy={enemy} hurt={false} />
+                </div>
+
+                <div className="absolute inset-x-5 bottom-5 z-10 grid grid-cols-3 overflow-hidden rounded-2xl border border-white/[.08] bg-raid-surface/90 backdrop-blur sm:inset-x-7 sm:bottom-7">
+                  {[
+                    ["Health", `${enemy.hp} HP`],
+                    ["Damage", `${Math.max(1, enemy.damage - armor)} HP`],
+                    ["Attack", `${((enemy.attackMs + attackBonus) / 1000).toFixed(1)} SEC`],
+                  ].map(([label, value]) => (
+                    <div key={label} className="border-r border-white/[.07] px-3 py-3 last:border-r-0 sm:px-4">
+                      <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-white/35">{label}</p>
+                      <p className="mt-1 font-mono text-xs font-bold text-white/85 sm:text-sm">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="typeraid-briefing-copy flex flex-col justify-center py-2 lg:py-4">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#9b7cff]/15 font-mono text-sm font-black text-raid-accent">⌘</span>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-raid-accent">Combat briefing</p>
+                </div>
+                <h2 className="mt-4 max-w-2xl text-4xl font-bold leading-[.95] tracking-[-0.06em] sm:text-[2.75rem]">
+                  Your keyboard<br />
+                  <span className="text-white/30">is the weapon.</span>
+                </h2>
+                <p className="mt-4 max-w-xl text-sm leading-6 text-white/48">
+                  Finish words before the enemy timer empties. Clean typing builds power; mistakes leave you exposed.
+                </p>
+
+                <ol className="mt-5 grid gap-2.5">
+                  {[
+                    ["01", "Type the word", "Letters submit instantly when the word is complete."],
+                    ["02", "Chain clean hits", "Every perfect word grows your combo and damage."],
+                    ["03", "Outrace the timer", `A wrong key costs ${typoDamage} HP. Enemy strikes cut your combo in half.`],
+                  ].map(([number, title, body]) => (
+                    <li key={number} className="group grid grid-cols-[2.75rem_1fr] items-center gap-3 rounded-2xl border border-white/[.07] bg-white/[.025] px-3 py-2.5 transition-colors hover:bg-white/[.04] sm:grid-cols-[3rem_10rem_1fr] sm:px-4">
+                      <span className="font-mono text-xs font-bold text-raid-accent">{number}</span>
+                      <h3 className="text-sm font-semibold text-white/90">{title}</h3>
+                      <p className="col-start-2 text-[11px] leading-5 text-white/42 sm:col-start-3">{body}</p>
+                    </li>
+                  ))}
+                </ol>
+
+                <div className="mt-5 flex flex-col gap-3 border-t border-white/[.07] pt-4 sm:flex-row sm:items-center">
+                  <button
+                    type="button"
+                    onClick={() => { setPhase("battle"); focusInput(); }}
+                    className="group inline-flex items-center justify-center gap-3 rounded-xl bg-[#8a6cff] px-6 py-3.5 text-sm font-semibold text-white shadow-[0_16px_45px_-20px_#7c5cff] transition hover:-translate-y-0.5 hover:bg-[#9b81ff] active:translate-y-0"
+                  >
+                    {wordsTyped > 0 ? "Continue fighting" : `Fight ${enemy.name}`}
+                    <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                  </button>
+                  <p className="text-[10px] leading-4 text-white/35">
+                    No Space or Enter needed<br className="hidden sm:block" /> · Esc pauses the fight
+                  </p>
+                </div>
               </div>
             </section>
           </main>
@@ -631,62 +719,6 @@ export function TypeRaidGame() {
             ) : null}
           </main>
         )}
-
-        {phase === "briefing" ? (
-          <div className="fixed inset-x-0 bottom-0 top-16 z-20 grid place-items-center overflow-y-auto bg-raid-overlay p-4 pb-20 backdrop-blur-xl sm:p-6">
-            <section className="typeraid-enter w-full max-w-4xl overflow-hidden rounded-3xl border border-white/[.1] bg-raid-surface shadow-[0_40px_120px_-55px_#7c5cff]">
-              <div className="grid lg:grid-cols-[.75fr_1.25fr]">
-                <div className="relative hidden min-h-[34rem] overflow-hidden border-r border-white/[.07] bg-[radial-gradient(circle_at_50%_45%,rgba(87,217,163,.18),transparent_46%),linear-gradient(180deg,var(--raid-fill),transparent)] p-6 lg:flex lg:flex-col">
-                  <div>
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-raid-success">First opponent</p>
-                    <h3 className="mt-1 text-xl font-semibold">{enemy.name}</h3>
-                    <p className="mt-1 text-xs text-white/35">{enemy.title}</p>
-                  </div>
-                  <div className="flex flex-1 items-center justify-center">
-                    <EnemyAvatar enemy={enemy} hurt={false} />
-                  </div>
-                  <p className="rounded-xl border border-[#ff5c7a]/15 bg-[#ff5c7a]/[.07] p-3 text-[11px] leading-5 text-white/48">
-                    <strong className="text-raid-danger">Threat:</strong> attacks every {((enemy.attackMs + attackBonus) / 1000).toFixed(1)} seconds for {Math.max(1, enemy.damage - armor)} HP.
-                  </p>
-                </div>
-
-                <div className="p-5 sm:p-8">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-raid-accent">How to play</p>
-                  <h2 className="mt-2 text-3xl font-bold tracking-[-0.045em] sm:text-4xl">Win the fight in three steps.</h2>
-                  <p className="mt-3 text-sm leading-6 text-white/42">Your keyboard is the weapon. There is no mouse control during combat.</p>
-
-                  <ol className="mt-7 space-y-3">
-                    {[
-                      ["1", "Type the large word", "Press its letters exactly as shown. It attacks automatically when the last letter is typed—do not press Space or Enter."],
-                      ["2", "Build a combo", "Each clean word deals at least 10 damage. Consecutive words increase your combo and unlock stronger hits."],
-                      ["3", "Beat the red timer", `An attack halves your combo. A wrong key costs ${typoDamage} HP and resets it entirely.`],
-                    ].map(([number, title, body]) => (
-                      <li key={number} className="flex gap-4 rounded-2xl border border-white/[.07] bg-white/[.025] p-4">
-                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#9b7cff]/12 font-mono text-sm font-bold text-raid-accent">{number}</span>
-                        <div>
-                          <h3 className="text-sm font-semibold text-white/90">{title}</h3>
-                          <p className="mt-1 text-[11px] leading-5 text-white/42">{body}</p>
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-
-                  <div className="mt-5 flex items-center gap-3 rounded-xl border border-[#65dca9]/15 bg-[#65dca9]/[.06] p-3 text-[11px] text-white/48">
-                    <span className="text-lg text-raid-success">✓</span>
-                    <span><strong className="text-white/80">Win:</strong> empty the enemy health bar. <strong className="ml-1 text-white/80">Lose:</strong> your health reaches zero.</span>
-                  </div>
-
-                  <div className="mt-7 flex flex-wrap items-center gap-3">
-                    <button type="button" onClick={() => { setPhase("battle"); focusInput(); }} className="rounded-xl bg-[#8a6cff] px-6 py-3 text-sm font-semibold shadow-[0_14px_35px_-18px_#7c5cff] transition hover:bg-[#9b81ff]">
-                      {wordsTyped > 0 ? "Continue fighting" : `Fight ${enemy.name} →`}
-                    </button>
-                    <span className="text-[10px] text-white/28">Press Esc anytime to pause</span>
-                  </div>
-                </div>
-              </div>
-            </section>
-          </div>
-        ) : null}
 
         {phase === "paused" ? (
           <div className="fixed inset-x-0 bottom-0 top-16 z-20 grid place-items-center overflow-y-auto bg-raid-overlay p-5 pb-20 backdrop-blur-md sm:pb-5">
