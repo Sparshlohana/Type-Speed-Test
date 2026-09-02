@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { getResultDetails } from "@/app/actions/results";
 import { LineChart, type Series } from "@/components/charts/LineChart";
+import { WeaknessAnalytics } from "@/components/stats/WeaknessAnalytics";
 import { Button } from "@/components/ui/Button";
 import { StatTile } from "@/components/ui/Card";
 import { Segmented } from "@/components/ui/Segmented";
@@ -448,6 +449,8 @@ export default function StatsPage() {
               )}
             </div>
           </section>
+
+          <WeaknessAnalytics results={filtered} />
 
           <section className="mt-4 grid gap-4 lg:grid-cols-2">
             <div className="overflow-x-auto rounded-xl border border-border bg-surface">

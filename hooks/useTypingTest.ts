@@ -182,7 +182,11 @@ export function useTypingTest({
         keystrokes: snapshot.keystrokes,
         errors: snapshot.errors,
         samples: finalSamples,
-        weaknesses: summarizeWeaknesses(snapshot.keyMistakes, snapshot.wordMistakes),
+        weaknesses: summarizeWeaknesses(
+          snapshot.keyMistakes,
+          snapshot.wordMistakes,
+          Object.values(snapshot.keyAccuracy),
+        ),
       };
 
       const previousResults = resultsStore

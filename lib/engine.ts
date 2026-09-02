@@ -16,7 +16,7 @@ import {
   type Quote,
   type QuoteLength,
 } from "./words";
-import type { KeyMistake } from "./weakness";
+import { trackKeyAttempt, type KeyAccuracyTracker, type KeyMistake } from "./weakness";
 
 export type Mode =
   | { kind: "time"; seconds: number; difficulty?: Difficulty }
@@ -43,6 +43,8 @@ export type TestState = {
   errors: number;
   /** Wrong printable keys retained even if the user later backspaces. */
   keyMistakes: KeyMistake[];
+  /** Every expected key attempted, retained for monotonic per-key accuracy. */
+  keyAccuracy: KeyAccuracyTracker;
   /** Target words involved in a mistake or committed incorrectly. */
   wordMistakes: string[];
   /** Attribution for quote mode, so the results screen can credit the source. */
@@ -126,6 +128,7 @@ export function createState(target: string[], quote: Quote | null = null): TestS
     keystrokes: 0,
     errors: 0,
     keyMistakes: [],
+    keyAccuracy: {},
     wordMistakes: [],
     quote,
   };
@@ -174,6 +177,9 @@ export function typeChar(state: TestState, char: string, now: number): TestState
     keyMistakes: isCorrect
       ? started.keyMistakes
       : [...started.keyMistakes, { expected: targetWord[current.length] ?? "", actual: char }],
+    keyAccuracy: targetWord[current.length]
+      ? trackKeyAttempt(started.keyAccuracy, targetWord[current.length], isCorrect)
+      : started.keyAccuracy,
     wordMistakes: isCorrect ? started.wordMistakes : [...started.wordMistakes, targetWord],
   };
 
@@ -205,6 +211,7 @@ export function typeSpace(state: TestState, now: number): TestState {
     wordIndex,
     keystrokes: started.keystrokes + 1,
     errors: started.errors + (wordIsPerfect ? 0 : 1),
+    keyAccuracy: trackKeyAttempt(started.keyAccuracy, " ", wordIsPerfect),
     wordMistakes: wordIsPerfect ? started.wordMistakes : [...started.wordMistakes, targetWord],
   };
 

@@ -92,7 +92,23 @@ function validWeaknesses(value: unknown): boolean {
       finite(item.count, 1, 10_000)
     );
   });
-  return keysValid && wordsValid;
+  const accuracyValid = summary.keyAccuracy === undefined || (
+    Array.isArray(summary.keyAccuracy) &&
+    summary.keyAccuracy.length <= 100 &&
+    summary.keyAccuracy.every((entry) => {
+      if (!entry || typeof entry !== "object") return false;
+      const item = entry as Record<string, unknown>;
+      return (
+        typeof item.key === "string" &&
+        item.key.length >= 1 &&
+        item.key.length <= 4 &&
+        finite(item.correct, 0, 100_000) &&
+        finite(item.attempts, 1, 100_000) &&
+        (item.correct as number) <= (item.attempts as number)
+      );
+    })
+  );
+  return keysValid && wordsValid && accuracyValid;
 }
 
 export function validateResult(input: unknown): ValidationResult {

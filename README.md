@@ -39,6 +39,8 @@ Notable choices:
   adds longer words, capitals, punctuation, and numbers. Scores stay separate by level.
 - **Adaptive practice**: records mistyped character pairs and problem words, then builds
   targeted 50-word sessions from the latest results.
+- **Per-key accuracy**: stores correct and incorrect attempts by expected key, then turns them
+  into a QWERTY heatmap, finger-level accuracy, confusion pairs, and problem-word analytics.
 - **Daily challenge**: one deterministic 50-word test shared by everyone, with a best-attempt
   leaderboard that resets at midnight IST.
 - **Shortcuts**: `Tab` restarts, `Esc` unfocuses, typing anything starts the test.
