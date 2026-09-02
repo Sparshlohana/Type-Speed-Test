@@ -444,6 +444,111 @@ body {
   }
 }
 
+/* ---------------------------------------------------------------------------
+   Wordfall arcade
+--------------------------------------------------------------------------- */
+
+.wordfall-shell {
+  background:
+    radial-gradient(circle at 50% -18%, color-mix(in srgb, var(--raid-success-text) 11%, transparent), transparent 46%),
+    var(--raid-bg);
+}
+
+.wordfall-aurora {
+  background:
+    radial-gradient(circle at 12% 34%, color-mix(in srgb, var(--raid-success-text) 7%, transparent), transparent 28%),
+    radial-gradient(circle at 88% 62%, color-mix(in srgb, var(--raid-accent-text) 7%, transparent), transparent 30%);
+}
+
+.wordfall-noise {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 3px,
+    color-mix(in srgb, var(--raid-text) 3%, transparent) 4px
+  );
+  mask-image: linear-gradient(to bottom, black, transparent 88%);
+}
+
+.wordfall-lanes {
+  background-image:
+    linear-gradient(var(--raid-grid-line) 1px, transparent 1px),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent calc(16.666% - 1px),
+      var(--raid-grid-line) calc(16.666% - 1px),
+      var(--raid-grid-line) 16.666%
+    );
+  background-size: 100% 56px, 100% 100%;
+  mask-image: linear-gradient(to bottom, black 5%, black 70%, transparent 100%);
+}
+
+.wordfall-target {
+  z-index: 1;
+  border-width: 1px;
+  border-style: solid;
+  box-shadow: 0 9px 28px -20px color-mix(in srgb, var(--raid-text) 45%, transparent);
+  animation: wordfall-target-in 220ms var(--ease) both;
+}
+
+.wordfall-target::before {
+  position: absolute;
+  bottom: calc(100% + 1px);
+  left: 50%;
+  width: 1px;
+  height: 28px;
+  content: "";
+  background: linear-gradient(to top, currentColor, transparent);
+  opacity: 0.24;
+}
+
+.wordfall-target-active {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--raid-success-text) 34%, transparent),
+    0 0 30px -10px var(--raid-success-text);
+}
+
+.wordfall-danger {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--raid-danger-text) 4%, transparent) 0,
+      color-mix(in srgb, var(--raid-danger-text) 4%, transparent) 8px,
+      transparent 8px,
+      transparent 16px
+    ),
+    linear-gradient(to bottom, transparent, color-mix(in srgb, var(--raid-danger-text) 10%, transparent));
+  animation: wordfall-danger-pulse 2.8s ease-in-out infinite;
+}
+
+.wordfall-enter {
+  animation: wordfall-enter 560ms var(--ease) both;
+}
+
+@keyframes wordfall-enter {
+  from { opacity: 0; transform: translateY(14px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes wordfall-target-in {
+  from { opacity: 0; filter: blur(5px); }
+  to { opacity: 1; filter: blur(0); }
+}
+
+@keyframes wordfall-danger-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wordfall-enter,
+  .wordfall-target,
+  .wordfall-danger {
+    animation: none;
+  }
+}
+
 /* Hide the scrollbar on horizontally scrollable pill rows without losing the scroll. */
 .no-scrollbar {
   scrollbar-width: none;
