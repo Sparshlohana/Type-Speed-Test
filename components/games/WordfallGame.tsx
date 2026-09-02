@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { saveGameRun } from "@/app/actions/games";
+import { achievementById, type ProgressReward } from "@/lib/progression";
+import { progressionStore } from "@/lib/progression-store";
 import {
   WORDFALL_MAX_LIVES,
   advanceWordfall,
@@ -64,6 +66,7 @@ export function WordfallGame() {
   const [currentRunId, setCurrentRunId] = useState("");
   const [bestScore, setBestScore] = useState(0);
   const [submission, setSubmission] = useState<"idle" | "saving" | "saved" | "best" | "error">("idle");
+  const [progressReward, setProgressReward] = useState<ProgressReward | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const submitted = useRef(new Set<string>());
 
@@ -78,6 +81,7 @@ export function WordfallGame() {
   const start = useCallback(() => {
     setCurrentRunId(runId());
     setSubmission("idle");
+    setProgressReward(null);
     setGame(createWordfallRun(Array.from({ length: 3 }, () => nextTarget(1))));
     window.setTimeout(() => inputRef.current?.focus(), 0);
   }, []);
@@ -147,7 +151,15 @@ export function WordfallGame() {
       missedWords: game.missed,
       durationMs: Math.round(game.elapsedMs),
     })
-      .then((response) => setSubmission(response.ok ? response.isPersonalBest ? "best" : "saved" : "error"))
+      .then((response) => {
+        if (!response.ok) {
+          setSubmission("error");
+          return;
+        }
+        progressionStore.setServer(response.progress);
+        setProgressReward(response.reward);
+        setSubmission(response.isPersonalBest ? "best" : "saved");
+      })
       .catch(() => setSubmission("error"));
   }, [accuracy, bestScore, currentRunId, game, wave, wpm]);
 
@@ -332,7 +344,9 @@ export function WordfallGame() {
                         <p className="mt-1 font-mono text-4xl font-black text-raid-success sm:text-5xl">{game.score.toLocaleString()}</p>
                       </div>
                     </div>
-                    <p className={`mt-4 min-h-4 text-xs ${submission === "best" ? "text-raid-success" : submission === "error" ? "text-raid-danger" : "text-raid-muted"}`} role="status">{submission === "saving" ? "Syncing this run…" : submission === "best" ? "New personal best · leaderboard updated" : submission === "saved" ? "Run saved to your account" : submission === "error" ? "Score could not be saved" : ""}</p>
+                    <p className={`mt-4 min-h-4 text-xs ${submission === "best" ? "text-raid-success" : submission === "error" ? "text-raid-danger" : "text-raid-muted"}`} role="status">
+                      {submission === "saving" ? "Syncing this run…" : submission === "error" ? "Score and progress could not be saved" : progressReward ? `+${progressReward.earnedXp} XP earned${progressReward.unlockedAchievements[0] ? ` · ${achievementById(progressReward.unlockedAchievements[0]).title} unlocked` : ""}${submission === "best" ? " · new personal best" : ""}` : ""}
+                    </p>
                     <div className="mt-5 grid grid-cols-4 divide-x divide-raid-border overflow-hidden rounded-xl border border-raid-border bg-raid-fill py-3">
                       <Stat label="Cleared" value={String(game.completed)} />
                       <Stat label="Best combo" value={`${game.bestCombo}×`} />

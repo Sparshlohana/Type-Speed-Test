@@ -6,6 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { saveGameRun } from "@/app/actions/games";
 import { useSettings } from "@/hooks/useSettings";
+import { achievementById, type ProgressReward } from "@/lib/progression";
+import { progressionStore } from "@/lib/progression-store";
 import { playSound } from "@/lib/sound";
 import { generateWords, type Difficulty } from "@/lib/words";
 
@@ -200,6 +202,7 @@ export function TypeRaidGame() {
   const [bestScore, setBestScore] = useState(0);
   const [runId, setRunId] = useState("");
   const [submission, setSubmission] = useState<"idle" | "saving" | "saved" | "best" | "error">("idle");
+  const [progressReward, setProgressReward] = useState<ProgressReward | null>(null);
   const [phoenixUsed, setPhoenixUsed] = useState(false);
   const [bufferUsed, setBufferUsed] = useState(false);
   const [enemyHurt, setEnemyHurt] = useState(false);
@@ -260,6 +263,7 @@ export function TypeRaidGame() {
     setScore(0);
     setRunId(createRunId());
     setSubmission("idle");
+    setProgressReward(null);
     setCombo(0);
     setBestCombo(0);
     setWordsTyped(0);
@@ -469,7 +473,15 @@ export function TypeRaidGame() {
       outcome: phase,
       durationMs: Math.round(elapsedMs),
     })
-      .then((response) => setSubmission(response.ok ? response.isPersonalBest ? "best" : "saved" : "error"))
+      .then((response) => {
+        if (!response.ok) {
+          setSubmission("error");
+          return;
+        }
+        progressionStore.setServer(response.progress);
+        setProgressReward(response.reward);
+        setSubmission(response.isPersonalBest ? "best" : "saved");
+      })
       .catch(() => setSubmission("error"));
   }, [accuracy, bestCombo, elapsedMs, phase, room, runId, score, wordsTyped, wpm]);
 
@@ -806,7 +818,7 @@ export function TypeRaidGame() {
               <h2 className="mt-2 text-5xl font-bold tracking-[-0.06em] sm:text-6xl">{phase === "victory" ? "The void compiled." : "The void won."}</h2>
               <p className="mt-4 text-sm text-white/38">{phase === "victory" ? "Every enemy defeated. Your keyboard survives another day." : "A cleaner combo might be all that stands between you and the next room."}</p>
               <p className={`mt-3 text-xs ${submission === "error" ? "text-raid-danger" : submission === "best" ? "text-raid-success" : "text-white/38"}`} role="status">
-                {submission === "saving" ? "Saving your arcade score…" : submission === "best" ? "New personal best · leaderboard updated" : submission === "saved" ? "Run saved to your account" : submission === "error" ? "Score could not be saved. Try another raid." : ""}
+                {submission === "saving" ? "Saving your arcade score and progress…" : submission === "error" ? "Score and progress could not be saved. Try another raid." : progressReward ? `+${progressReward.earnedXp} XP earned${progressReward.unlockedAchievements[0] ? ` · ${achievementById(progressReward.unlockedAchievements[0]).title} unlocked` : ""}${submission === "best" ? " · new personal best" : ""}` : ""}
               </p>
               <div className="mt-9 grid grid-cols-4 overflow-hidden rounded-2xl border border-white/[.08] bg-white/[.025]">
                 {[{ label: "Score", value: score.toLocaleString() }, { label: "Words", value: wordsTyped }, { label: "Best combo", value: `${bestCombo}×` }, { label: "Accuracy", value: `${accuracy.toFixed(0)}%` }].map((stat) => (

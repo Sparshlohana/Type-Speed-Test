@@ -150,10 +150,12 @@ export default function ProgressPage() {
         </div>
       </section>
 
-      <section className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-3">
         {[
           ["Tests completed", compact(progress.totalTests)],
-          ["Practice time", formatDuration(progress.totalDurationMs)],
+          ["Games completed", compact(progress.totalGames)],
+          ["Total active time", formatDuration(progress.totalDurationMs)],
+          ["Arcade time", formatDuration(progress.totalGameDurationMs)],
           ["Correct characters", compact(progress.totalCorrectChars)],
           ["Best speed", `${Math.round(progress.bestWpm)} WPM`],
         ].map(([label, value]) => (
@@ -209,7 +211,7 @@ export default function ProgressPage() {
           <h2 className="text-sm font-medium text-text">
             {nextStreak ? `${nextStreak - progress.currentStreak} days to your next streak badge` : "30-day streak badge earned"}
           </h2>
-          <p className="mt-1 text-xs text-sub">Complete at least one test each day to keep the streak alive.</p>
+          <p className="mt-1 text-xs text-sub">Complete a typing test or arcade game each day to keep the streak alive.</p>
         </div>
         <Link href="/" className="shrink-0 rounded-lg bg-accent px-4 py-2 text-center text-sm font-medium text-white transition-opacity hover:opacity-90">
           Start a test

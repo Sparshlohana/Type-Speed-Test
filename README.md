@@ -46,8 +46,9 @@ Notable choices:
   into a QWERTY heatmap, finger-level accuracy, confusion pairs, and problem-word analytics.
 - **Daily challenge**: one deterministic 50-word test shared by everyone, with a best-attempt
   leaderboard that resets at midnight IST.
-- **Progression**: every valid test earns volume, accuracy, duration, and difficulty XP. Three
-  daily goals, streak bonuses, levels, and 17 one-time achievement badges reward consistency.
+- **Progression**: every valid test and completed arcade game earns XP, including participation
+  XP for a lost game. Game time contributes to active time and daily focused minutes. Three daily
+  goals, streak bonuses, levels, and 23 one-time achievement badges reward consistency.
 - **Arcade games**: TypeRaid turns clean words into roguelike attacks; Wordfall is an endless,
   accelerating survival run with lives and combos. Game boards keep one compact personal-best row
   per player and rank score first, then accuracy and run time.

@@ -3,11 +3,13 @@
 import { updateTag } from "next/cache";
 
 import { updateGamePersonalBest, type GameRun } from "@/lib/db/game-storage";
+import { updateUserGameProgress } from "@/lib/db/progress-storage";
+import type { ProgressReward, ProgressState } from "@/lib/progression";
 import { LEADERBOARD_CACHE_TAG } from "@/lib/server/leaderboard";
 import { requireUser } from "@/lib/server/session";
 
 export type SaveGameRunResponse =
-  | { ok: true; isPersonalBest: boolean }
+  | { ok: true; isPersonalBest: boolean; progress: ProgressState; reward: ProgressReward }
   | { ok: false; error: string };
 
 function finiteNumber(value: unknown, min: number, max: number): value is number {
@@ -47,7 +49,10 @@ export async function saveGameRun(input: unknown): Promise<SaveGameRunResponse> 
   if (!run) return { ok: false, error: "Invalid game result." };
 
   const user = await requireUser();
-  const isPersonalBest = await updateGamePersonalBest(user, run);
+  const [isPersonalBest, progression] = await Promise.all([
+    updateGamePersonalBest(user, run),
+    updateUserGameProgress(user.id, run),
+  ]);
   if (isPersonalBest) updateTag(LEADERBOARD_CACHE_TAG);
-  return { ok: true, isPersonalBest };
+  return { ok: true, isPersonalBest, progress: progression.state, reward: progression.reward };
 }
