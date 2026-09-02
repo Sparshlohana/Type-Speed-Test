@@ -7,6 +7,7 @@ import { LoadingStatus, Skeleton } from "@/components/ui/Skeleton";
 import {
   ACHIEVEMENTS,
   DAILY_GOALS,
+  achievementProgress,
   levelProgress,
 } from "@/lib/progression";
 import { progressionStore } from "@/lib/progression-store";
@@ -25,6 +26,26 @@ function ProgressSkeleton() {
       <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-28 rounded-xl" />)}
       </div>
+      <div className="mt-10 flex items-end justify-between">
+        <div>
+          <Skeleton className="h-6 w-36" />
+          <Skeleton className="mt-2 h-3 w-72 max-w-full" />
+        </div>
+        <Skeleton className="h-3 w-24" />
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 9 }, (_, index) => (
+          <div key={index} className="flex gap-4 rounded-xl border border-border bg-surface p-4">
+            <Skeleton className="h-11 w-11 shrink-0 rounded-xl" />
+            <div className="flex-1">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="mt-2 h-3 w-full" />
+              <Skeleton className="mt-4 h-2 w-24" />
+              <Skeleton className="mt-3 h-1 w-full rounded-full" />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -40,7 +61,9 @@ export default function ProgressPage() {
     progressionStore.getServer,
   );
 
-  if (!hydrated) return <ProgressSkeleton />;
+  if (!hydrated || (syncing && source === "local" && progress.totalTests === 0)) {
+    return <ProgressSkeleton />;
+  }
 
   const level = levelProgress(progress);
   const unlockedCount = Object.keys(progress.achievements).length;
@@ -65,7 +88,7 @@ export default function ProgressPage() {
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-sub">Current level</p>
             <div className="mt-2 flex items-baseline gap-3">
               <span className="font-mono text-6xl font-semibold leading-none text-accent sm:text-7xl">{level.level}</span>
-              <span className="text-sm text-sub">{compact(progress.xp)} total XP</span>
+              <span className="text-sm text-sub">{compact(progress.xp)} total XP · no level cap</span>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:min-w-80">
@@ -152,12 +175,13 @@ export default function ProgressPage() {
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {ACHIEVEMENTS.map((achievement) => {
             const unlockedAt = progress.achievements[achievement.id];
+            const milestone = achievementProgress(achievement.id, progress);
             return (
               <article key={achievement.id} className={`flex gap-4 rounded-xl border p-4 ${unlockedAt ? "border-[color-mix(in_srgb,var(--accent)_35%,var(--border))] bg-surface" : "border-border bg-surface/50 opacity-60"}`}>
                 <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl font-mono text-xs font-bold ${unlockedAt ? "bg-accent text-white" : "bg-bg text-sub"}`} aria-hidden>
                   {achievement.symbol}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="truncate text-sm font-medium text-text">{achievement.title}</h3>
                     <span className="shrink-0 font-mono text-[10px] text-accent">+{achievement.xp}</span>
@@ -166,6 +190,13 @@ export default function ProgressPage() {
                   <p className="mt-2 text-[10px] uppercase tracking-[0.12em] text-sub">
                     {unlockedAt ? `Unlocked ${new Date(unlockedAt).toLocaleDateString()}` : "Locked"}
                   </p>
+                  <div className="mt-3 flex items-center justify-between gap-3 text-[10px] text-sub">
+                    <span className="font-mono">{milestone.label}</span>
+                    <span className="font-mono">{Math.round(milestone.percent)}%</span>
+                  </div>
+                  <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-bg" role="progressbar" aria-label={`${achievement.title} progress`} aria-valuemin={0} aria-valuemax={milestone.target} aria-valuenow={Math.min(milestone.current, milestone.target)}>
+                    <div className="h-full rounded-full bg-accent" style={{ width: `${milestone.percent}%` }} />
+                  </div>
                 </div>
               </article>
             );

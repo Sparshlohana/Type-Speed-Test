@@ -82,6 +82,13 @@ export type AchievementDefinition = {
   xp: number;
 };
 
+export type AchievementProgress = {
+  current: number;
+  target: number;
+  percent: number;
+  label: string;
+};
+
 export const DAILY_GOALS: readonly DailyGoalDefinition[] = [
   {
     id: "tests",
@@ -404,4 +411,43 @@ export function buildProgressFromResults(results: readonly StoredResult[]): Prog
 
 export function achievementById(id: AchievementId): AchievementDefinition {
   return ACHIEVEMENTS.find((achievement) => achievement.id === id) ?? ACHIEVEMENTS[0];
+}
+
+/** Current lifetime progress toward an achievement, suitable for compact UI cards. */
+export function achievementProgress(
+  id: AchievementId,
+  state: ProgressState,
+): AchievementProgress {
+  let current: number;
+  let target: number;
+  let unit: string;
+
+  switch (id) {
+    case "first_flow": current = state.totalTests; target = 1; unit = "test"; break;
+    case "tests_10": current = state.totalTests; target = 10; unit = "tests"; break;
+    case "tests_50": current = state.totalTests; target = 50; unit = "tests"; break;
+    case "tests_100": current = state.totalTests; target = 100; unit = "tests"; break;
+    case "speed_40": current = state.bestWpm; target = 40; unit = "WPM"; break;
+    case "speed_60": current = state.bestWpm; target = 60; unit = "WPM"; break;
+    case "speed_80": current = state.bestWpm; target = 80; unit = "WPM"; break;
+    case "speed_100": current = state.bestWpm; target = 100; unit = "WPM"; break;
+    case "perfect_accuracy": current = state.bestAccuracy; target = 100; unit = "% accuracy"; break;
+    case "streak_3": current = state.longestStreak; target = 3; unit = "days"; break;
+    case "streak_7": current = state.longestStreak; target = 7; unit = "days"; break;
+    case "streak_30": current = state.longestStreak; target = 30; unit = "days"; break;
+    case "daily_triple": current = state.daily.claimed.length; target = 3; unit = "goals today"; break;
+    case "daily_7": current = state.dailyChallenges; target = 7; unit = "daily challenges"; break;
+    case "practice_10": current = state.practiceTests; target = 10; unit = "practice tests"; break;
+    case "level_5": current = levelForXp(state.xp); target = 5; unit = "level"; break;
+    case "level_10": current = levelForXp(state.xp); target = 10; unit = "level"; break;
+  }
+
+  current = state.achievements[id] ? target : Math.min(current, target);
+  const shown = Number.isInteger(current) ? current : Math.round(current * 10) / 10;
+  return {
+    current,
+    target,
+    percent: Math.min(100, (current / target) * 100),
+    label: `${shown} / ${target} ${unit}`,
+  };
 }
