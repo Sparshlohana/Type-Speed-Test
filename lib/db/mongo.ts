@@ -3,6 +3,7 @@ import { MongoClient, type Collection, type Db, type ObjectId } from "mongodb";
 import type { Mode } from "@/lib/engine";
 import type { CharStats, Sample } from "@/lib/metrics";
 import type { WeaknessSummary } from "@/lib/weakness";
+import type { ProgressState } from "@/lib/progression";
 
 export type ResultDoc = {
   _id: ObjectId;
@@ -58,6 +59,14 @@ export type UserTypingAnalyticsDoc = {
   updatedAt: Date;
 };
 
+export type UserProgressDoc = {
+  _id: ObjectId;
+  userId: string;
+  revision: number;
+  progress: ProgressState;
+  updatedAt: Date;
+};
+
 export type DailyChallengeDoc = {
   _id: ObjectId;
   challengeId: string;
@@ -99,6 +108,7 @@ export async function collections(): Promise<{
   resultSamples: Collection<ResultSamplesDoc>;
   personalBests: Collection<PersonalBestDoc>;
   userTypingAnalytics: Collection<UserTypingAnalyticsDoc>;
+  userProgress: Collection<UserProgressDoc>;
   dailyChallengeResults: Collection<DailyChallengeDoc>;
 }> {
   const db = await getDb();
@@ -107,6 +117,7 @@ export async function collections(): Promise<{
     resultSamples: db.collection<ResultSamplesDoc>("result_samples"),
     personalBests: db.collection<PersonalBestDoc>("personal_bests"),
     userTypingAnalytics: db.collection<UserTypingAnalyticsDoc>("user_typing_analytics"),
+    userProgress: db.collection<UserProgressDoc>("user_progress"),
     dailyChallengeResults: db.collection<DailyChallengeDoc>("daily_challenge_results"),
   };
 }

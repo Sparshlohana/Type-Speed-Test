@@ -3,7 +3,9 @@
 import { useEffect } from "react";
 
 import { listResults, syncLocalResults } from "@/app/actions/results";
+import { getProgress } from "@/app/actions/progress";
 import { useSession } from "@/lib/auth-client";
+import { progressionStore } from "@/lib/progression-store";
 import { resultsStore } from "@/lib/store";
 import { loadResults } from "@/lib/storage";
 
@@ -14,7 +16,9 @@ export function useResultsSync(): void {
   useEffect(() => {
     if (isPending) return;
     if (!userId) {
-      resultsStore.setLocalResults(loadResults());
+      const localResults = loadResults();
+      resultsStore.setLocalResults(localResults);
+      progressionStore.setLocal(localResults);
       return;
     }
 
@@ -22,6 +26,7 @@ export function useResultsSync(): void {
     const syncKey = `typeflow.synced.${userId}`;
 
     resultsStore.setSyncing(true);
+    progressionStore.setSyncing(true);
     void (async () => {
       try {
         const alreadySynced = window.localStorage.getItem(syncKey) === "1";
@@ -31,9 +36,16 @@ export function useResultsSync(): void {
           window.localStorage.setItem(syncKey, "1");
         }
         const serverResults = await listResults();
-        if (!cancelled) resultsStore.setServerResults(serverResults);
+        const progress = await getProgress();
+        if (!cancelled) {
+          resultsStore.setServerResults(serverResults);
+          progressionStore.setServer(progress);
+        }
       } catch {
-        if (!cancelled) resultsStore.setSyncing(false);
+        if (!cancelled) {
+          resultsStore.setSyncing(false);
+          progressionStore.setSyncing(false);
+        }
       }
     })();
 

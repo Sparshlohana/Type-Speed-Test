@@ -3,16 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useSyncExternalStore } from "react";
 
 import { LoadingStatus, Skeleton } from "@/components/ui/Skeleton";
 import { useSettings } from "@/hooks/useSettings";
 import { signIn, signOut, useSession } from "@/lib/auth-client";
 import { initialsOf } from "@/lib/format";
+import { levelProgress } from "@/lib/progression";
+import { progressionStore } from "@/lib/progression-store";
 
 const LINKS = [
   { href: "/", label: "Test", mobileLabel: "Test" },
   { href: "/practice", label: "Practice", mobileLabel: "Practice" },
   { href: "/daily", label: "Daily", mobileLabel: "Daily" },
+  { href: "/progress", label: "Progress", mobileLabel: "Goals" },
   { href: "/games", label: "Games", mobileLabel: "Games" },
   { href: "/leaderboard", label: "Leaderboard", mobileLabel: "Ranks" },
   { href: "/stats", label: "Stats", mobileLabel: "Stats" },
@@ -30,6 +34,12 @@ export function TopNav() {
   const [authActionPending, setAuthActionPending] = useState(false);
   const user = session?.user;
   const accountPending = isPending || authActionPending;
+  const progressSnapshot = useSyncExternalStore(
+    progressionStore.subscribe,
+    progressionStore.get,
+    progressionStore.getServer,
+  );
+  const level = levelProgress(progressSnapshot.progress).level;
 
   return (
     <>
@@ -64,6 +74,14 @@ export function TopNav() {
           </nav>
 
           <div className="flex items-center gap-2">
+            {progressSnapshot.hydrated ? (
+              <Link
+                href="/progress"
+                className="hidden rounded-full border border-border bg-surface px-2.5 py-1 font-mono text-[11px] font-semibold text-accent xl:block"
+              >
+                Lv {level}
+              </Link>
+            ) : null}
             {accountPending ? (
               <div className="flex items-center gap-2">
                 <LoadingStatus label="Loading account" />
@@ -112,7 +130,7 @@ export function TopNav() {
       {/* Small screens get the sections as a bottom bar instead. */}
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-30 flex overflow-x-auto border-t border-border bg-bg/90 backdrop-blur-md sm:hidden"
+        className="no-scrollbar fixed inset-x-0 bottom-0 z-30 flex overflow-x-auto border-t border-border bg-bg/90 backdrop-blur-md sm:hidden"
       >
         {LINKS.map((link) => {
           const active = isActive(pathname, link.href);

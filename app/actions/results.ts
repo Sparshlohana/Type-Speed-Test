@@ -11,6 +11,7 @@ import {
   toResultDocument,
   updatePersonalBest,
 } from "@/lib/db/result-storage";
+import { updateUserProgress } from "@/lib/db/progress-storage";
 import { LEADERBOARD_CACHE_TAG } from "@/lib/server/leaderboard";
 import { getUser, requireUser } from "@/lib/server/session";
 import { validateResult } from "@/lib/server/validate";
@@ -53,7 +54,7 @@ export async function saveResult(input: unknown): Promise<SaveResultResponse> {
     { projection: { wpm: 1 } },
   );
 
-  await results.updateOne(
+  const stored = await results.updateOne(
     { userId: user.id, clientId: validation.value.id },
     { $setOnInsert: { _id: new ObjectId(), ...toResultDocument(validation.value, user) } },
     { upsert: true },
@@ -62,7 +63,12 @@ export async function saveResult(input: unknown): Promise<SaveResultResponse> {
     updatePersonalBest(user, validation.value),
     storeResultSamples(user.id, [validation.value]),
   ]);
-  await addToUserAnalytics(user.id, [validation.value]);
+  if (stored.upsertedCount > 0) {
+    await Promise.all([
+      addToUserAnalytics(user.id, [validation.value]),
+      updateUserProgress(user.id, [validation.value]),
+    ]);
+  }
   await pruneUserStorage(user.id);
   await results.updateOne(
     { userId: user.id, clientId: validation.value.id },
@@ -91,8 +97,19 @@ export async function syncLocalResults(inputs: unknown): Promise<{ ok: boolean; 
 
   if (validated.length === 0) return { ok: true };
   const { results } = await collections();
-  await results.bulkWrite(
-    validated.map((result) => ({
+  const retentionBoundary = await results
+    .find({ userId: user.id }, { projection: { ts: 1 } })
+    .sort({ ts: -1 })
+    .skip(199)
+    .limit(1)
+    .next();
+  // A stale browser must not resurrect history that the 200-result retention
+  // policy already pruned. Personal bests still consider every valid local run.
+  const retained = retentionBoundary
+    ? validated.filter((result) => result.ts >= retentionBoundary.ts)
+    : validated;
+  if (retained.length > 0) await results.bulkWrite(
+    retained.map((result) => ({
       updateOne: {
         filter: { userId: user.id, clientId: result.id },
         update: { $setOnInsert: { _id: new ObjectId(), ...toResultDocument(result, user) } },
@@ -115,14 +132,17 @@ export async function syncLocalResults(inputs: unknown): Promise<{ ok: boolean; 
   const bestUpdates = await Promise.all(
     [...bestByMode.values()].map((result) => updatePersonalBest(user, result)),
   );
-  await Promise.all([
-    storeResultSamples(user.id, validated),
-    addToUserAnalytics(user.id, validated),
-  ]);
-  await results.updateMany(
-    { userId: user.id, clientId: { $in: validated.map((result) => result.id) } },
-    { $unset: { samples: "" } },
-  );
+  if (retained.length > 0) {
+    await Promise.all([
+      storeResultSamples(user.id, retained),
+      addToUserAnalytics(user.id, retained),
+      updateUserProgress(user.id, retained),
+    ]);
+    await results.updateMany(
+      { userId: user.id, clientId: { $in: retained.map((result) => result.id) } },
+      { $unset: { samples: "" } },
+    );
+  }
   await pruneUserStorage(user.id);
   if (bestUpdates.some(Boolean)) updateTag(LEADERBOARD_CACHE_TAG);
   return { ok: true };
@@ -159,6 +179,7 @@ export async function clearResults(): Promise<void> {
     resultSamples,
     personalBests,
     userTypingAnalytics,
+    userProgress,
     dailyChallengeResults,
   } = await collections();
   const writes = await Promise.all([
@@ -166,6 +187,7 @@ export async function clearResults(): Promise<void> {
     resultSamples.deleteMany({ userId: user.id }),
     personalBests.deleteMany({ userId: user.id }),
     userTypingAnalytics.deleteMany({ userId: user.id }),
+    userProgress.deleteMany({ userId: user.id }),
     dailyChallengeResults.deleteMany({ userId: user.id }),
   ]);
   if (writes.some((write) => write.deletedCount > 0)) updateTag(LEADERBOARD_CACHE_TAG);

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 
 import { LineChart, type Marker, type Series } from "@/components/charts/LineChart";
@@ -12,6 +13,7 @@ import type { FinishedResult, PersonalBestMetric } from "@/hooks/useTypingTest";
 import { modeLabel } from "@/lib/engine";
 import { formatDuration, round } from "@/lib/format";
 import { totalTypedChars } from "@/lib/metrics";
+import { achievementById, DAILY_GOALS } from "@/lib/progression";
 import type { Quote } from "@/lib/words";
 
 const BEST_LABELS: Record<PersonalBestMetric, string> = {
@@ -51,7 +53,7 @@ export function ResultsPanel({
   onNewTest: () => void;
 }) {
   const [toast, setToast] = useState<string | null>(null);
-  const { result, previousBest, personalBests } = finished;
+  const { result, previousBest, personalBests, progressReward } = finished;
 
   const series = useMemo<Series[]>(
     () => [
@@ -154,6 +156,50 @@ export function ResultsPanel({
         <StatTile label="Correct" value={result.chars.correct} />
         <StatTile label="Incorrect" value={result.chars.incorrect + result.chars.extra} />
         <StatTile label="Errors" value={result.errors} hint={`${result.keystrokes} keystrokes`} />
+      </div>
+
+      <div
+        className="rise-in mt-4 overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--accent)_35%,var(--border))] bg-[linear-gradient(120deg,var(--accent-soft),var(--surface)_55%)] p-5"
+        style={{ animationDelay: "110ms" }}
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-sub">Progress earned</p>
+            <p className="mt-1 font-mono text-3xl font-semibold text-accent">+{progressReward.earnedXp} XP</p>
+            <p className="mt-1 text-xs text-sub">
+              {progressReward.testXp} test XP
+              {progressReward.dailyGoalXp ? ` · ${progressReward.dailyGoalXp} goal XP` : ""}
+              {progressReward.streakXp ? ` · ${progressReward.streakXp} streak XP` : ""}
+              {progressReward.achievementXp ? ` · ${progressReward.achievementXp} badge XP` : ""}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 sm:max-w-[55%] sm:justify-end">
+            {progressReward.levelAfter > progressReward.levelBefore ? (
+              <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white">
+                Level {progressReward.levelAfter} reached
+              </span>
+            ) : null}
+            {progressReward.completedGoals.map((goalId) => {
+              const goal = DAILY_GOALS.find((item) => item.id === goalId);
+              return goal ? (
+                <span key={goalId} className="rounded-full border border-border bg-bg/70 px-3 py-1 text-xs text-text">
+                  Goal complete · {goal.title}
+                </span>
+              ) : null;
+            })}
+            {progressReward.unlockedAchievements.map((achievementId) => {
+              const achievement = achievementById(achievementId);
+              return (
+                <span key={achievementId} className="rounded-full border border-accent bg-bg/70 px-3 py-1 text-xs font-medium text-accent">
+                  {achievement.symbol} · {achievement.title}
+                </span>
+              );
+            })}
+            <Link href="/progress" className="px-2 py-1 text-xs font-medium text-accent hover:underline">
+              View progress →
+            </Link>
+          </div>
+        </div>
       </div>
 
       <div

@@ -31,6 +31,8 @@ import {
   type StoredResult,
 } from "@/lib/storage";
 import { resultsStore } from "@/lib/store";
+import { progressionStore } from "@/lib/progression-store";
+import type { ProgressReward } from "@/lib/progression";
 import { playSound } from "@/lib/sound";
 import { summarizeWeaknesses } from "@/lib/weakness";
 
@@ -41,6 +43,7 @@ export type FinishedResult = {
   previousBest: number | null;
   isPersonalBest: boolean;
   personalBests: PersonalBestMetric[];
+  progressReward: ProgressReward;
 };
 
 export type PersonalBestMetric = "wpm" | "raw" | "accuracy" | "consistency";
@@ -206,6 +209,7 @@ export function useTypingTest({
         return previousHigh === null || (value as number) > previousHigh ? [key] : [];
       });
       resultsStore.add(result);
+      const progressReward = progressionStore.add(result);
 
       samplesRef.current = finalSamples;
       setSamples(finalSamples);
@@ -215,6 +219,7 @@ export function useTypingTest({
         previousBest: previous ? previous.wpm : null,
         isPersonalBest: !previous || result.wpm > previous.wpm,
         personalBests,
+        progressReward,
       };
       setFinished(completed);
       onFinished?.(completed);

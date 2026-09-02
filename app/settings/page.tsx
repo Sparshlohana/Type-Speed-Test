@@ -11,6 +11,7 @@ import { Toggle } from "@/components/ui/Toggle";
 import { useSettings } from "@/hooks/useSettings";
 import { useSession } from "@/lib/auth-client";
 import { playSound } from "@/lib/sound";
+import { progressionStore } from "@/lib/progression-store";
 import { resultsStore } from "@/lib/store";
 import {
   ACCENT_HEX,
@@ -72,6 +73,7 @@ export default function SettingsPage() {
       return;
     }
     resultsStore.clear();
+    progressionStore.clear();
     reset();
     setConfirmingReset(false);
     if (session?.user) {

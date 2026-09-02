@@ -27,6 +27,7 @@ Google redirect URI. Signed-out typing continues to work without the server serv
 | Clock, per-second sampling, scoring | `hooks/useTypingTest.ts` |
 | Input handling, caret, line scrolling | `components/typing/TypingArea.tsx` |
 | Charts | `components/charts/LineChart.tsx` — hand-rolled SVG, no chart library |
+| XP, levels, daily goals, and achievements | `lib/progression.ts` + `app/progress/page.tsx` |
 | Persistence | `lib/storage.ts` + `lib/store.ts` locally; MongoDB server actions when signed in |
 
 Notable choices:
@@ -45,6 +46,8 @@ Notable choices:
   into a QWERTY heatmap, finger-level accuracy, confusion pairs, and problem-word analytics.
 - **Daily challenge**: one deterministic 50-word test shared by everyone, with a best-attempt
   leaderboard that resets at midnight IST.
+- **Progression**: every valid test earns volume, accuracy, duration, and difficulty XP. Three
+  daily goals, streak bonuses, levels, and 17 one-time achievement badges reward consistency.
 - **Shortcuts**: `Tab` restarts, `Esc` unfocuses, typing anything starts the test.
 
 The leaderboard ranks each signed-in user's best MongoDB result for the selected mode.
@@ -53,7 +56,8 @@ The leaderboard ranks each signed-in user's best MongoDB result for the selected
 
 MongoDB keeps the latest 200 result summaries and latest 20 detailed sample graphs per user.
 Unusually long tests are downsampled to at most 120 graph points before persistence.
-Personal bests and cumulative key/word analytics live in compact dedicated collections, so
-pruning history does not affect leaderboards or adaptive analytics. Daily leaderboard rows expire
+Personal bests, cumulative key/word analytics, and one compact progression document per user live
+in dedicated collections, so pruning history does not affect leaderboards, adaptive analytics, XP,
+or achievements. Daily leaderboard rows expire
 after 90 days. Run `npm run db:optimize` before deploying this storage layout, review the report,
 then run it again with `-- --apply` to backfill and prune existing data safely.

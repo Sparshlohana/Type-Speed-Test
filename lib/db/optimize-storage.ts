@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 import type { StoredResult } from "../storage.ts";
 import { collections, type ResultDoc } from "./mongo.ts";
 import { createIndexes } from "./indexes.ts";
+import { updateUserProgress } from "./progress-storage.ts";
 import {
   DAILY_RETENTION_DAYS,
   MAX_STORED_SAMPLE_POINTS,
@@ -27,6 +28,8 @@ type MigrationReport = {
   resultsPruned: number;
   personalBests: number;
   analyticsCreated: number;
+  progressCreated: number;
+  progressUpdated: number;
   dailyExpiryUpdated: number;
 };
 
@@ -61,6 +64,7 @@ export async function optimizeStorage(apply: boolean): Promise<MigrationReport> 
     results,
     resultSamples,
     userTypingAnalytics,
+    userProgress,
     dailyChallengeResults,
   } = await collections();
   const userIds = await results.distinct("userId");
@@ -73,6 +77,8 @@ export async function optimizeStorage(apply: boolean): Promise<MigrationReport> 
     resultsPruned: 0,
     personalBests: 0,
     analyticsCreated: 0,
+    progressCreated: 0,
+    progressUpdated: 0,
     dailyExpiryUpdated: 0,
   };
 
@@ -94,7 +100,16 @@ export async function optimizeStorage(apply: boolean): Promise<MigrationReport> 
       .slice(0, SAMPLE_HISTORY_LIMIT);
     report.samplesKept += sampleDocs.length;
     const analyticsExists = await userTypingAnalytics.countDocuments({ userId }, { limit: 1 });
+    const progressDocument = await userProgress.findOne(
+      { userId },
+      { projection: { "progress.processedResultIds": 1 } },
+    );
+    const progressPending = docs.some(
+      (doc) => !progressDocument?.progress.processedResultIds.includes(doc.clientId),
+    );
     if (analyticsExists === 0) report.analyticsCreated++;
+    if (!progressDocument) report.progressCreated++;
+    else if (progressPending) report.progressUpdated++;
     if (!apply) continue;
 
     if (sampleDocs.length > 0) {
@@ -139,6 +154,10 @@ export async function optimizeStorage(apply: boolean): Promise<MigrationReport> 
         },
         { upsert: true },
       );
+    }
+
+    if (!progressDocument || progressPending) {
+      await updateUserProgress(userId, docs.map(fromDocument));
     }
 
     await results.updateMany({ userId }, { $unset: { samples: "" } });
