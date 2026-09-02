@@ -16,25 +16,30 @@ function finiteNumber(value: unknown, min: number, max: number): value is number
 
 function validateGameRun(input: unknown): GameRun | null {
   if (!input || typeof input !== "object") return null;
-  const run = input as Partial<GameRun>;
+  const run = input as Record<string, unknown>;
   if (
     typeof run.clientId !== "string" || run.clientId.length < 1 || run.clientId.length > 128 ||
-    run.gameId !== "typeraid" ||
-    !Number.isInteger(run.score) || !finiteNumber(run.score, 0, 10_000_000) ||
+    (run.gameId !== "typeraid" && run.gameId !== "wordfall") ||
+    !Number.isInteger(run.score) || !finiteNumber(run.score, 0, 1_000_000_000) ||
     !Number.isInteger(run.wpm) || !finiteNumber(run.wpm, 0, 1_000) ||
     !finiteNumber(run.accuracy, 0, 100) ||
-    !Number.isInteger(run.words) || !finiteNumber(run.words, 0, 10_000) ||
-    !Number.isInteger(run.bestCombo) || !finiteNumber(run.bestCombo, 0, 10_000) ||
-    !Number.isInteger(run.roomsCleared) || !finiteNumber(run.roomsCleared, 0, 4) ||
-    (run.outcome !== "victory" && run.outcome !== "defeat") ||
-    !Number.isInteger(run.durationMs) || !finiteNumber(run.durationMs, 0, 3_600_000)
+    !Number.isInteger(run.words) || !finiteNumber(run.words, 0, 100_000) ||
+    !Number.isInteger(run.bestCombo) || !finiteNumber(run.bestCombo, 0, 100_000) ||
+    !Number.isInteger(run.durationMs) || !finiteNumber(run.durationMs, 0, 86_400_000)
   ) return null;
-  if (
-    run.bestCombo > run.words ||
-    (run.outcome === "victory" && run.roomsCleared !== 4) ||
-    (run.outcome === "defeat" && run.roomsCleared >= 4)
+  if (run.bestCombo > run.words) return null;
+  if (run.gameId === "typeraid") {
+    if (
+      !Number.isInteger(run.roomsCleared) || !finiteNumber(run.roomsCleared, 0, 4) ||
+      (run.outcome !== "victory" && run.outcome !== "defeat") ||
+      (run.outcome === "victory" && run.roomsCleared !== 4) ||
+      (run.outcome === "defeat" && run.roomsCleared >= 4)
+    ) return null;
+  } else if (
+    !Number.isInteger(run.wave) || !finiteNumber(run.wave, 1, 100) ||
+    !Number.isInteger(run.missedWords) || !finiteNumber(run.missedWords, 0, 100_000)
   ) return null;
-  return run as GameRun;
+  return run as unknown as GameRun;
 }
 
 export async function saveGameRun(input: unknown): Promise<SaveGameRunResponse> {

@@ -17,8 +17,10 @@ export type GameLeaderboardEntry = {
   accuracy: number;
   words: number;
   bestCombo: number;
-  roomsCleared: number;
-  outcome: "victory" | "defeat";
+  roomsCleared?: number;
+  outcome?: "victory" | "defeat";
+  wave?: number;
+  missedWords?: number;
   attempts: number;
   isYou?: boolean;
 };

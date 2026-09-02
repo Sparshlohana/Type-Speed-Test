@@ -5,9 +5,9 @@ import type { ResultOwner } from "./result-storage.ts";
 
 export const GAME_RUN_ID_LIMIT = 20;
 
-export type GameId = "typeraid";
+export type GameId = "typeraid" | "wordfall";
 
-export type GameRun = {
+type BaseGameRun = {
   clientId: string;
   gameId: GameId;
   score: number;
@@ -15,16 +15,22 @@ export type GameRun = {
   accuracy: number;
   words: number;
   bestCombo: number;
-  roomsCleared: number;
-  outcome: "victory" | "defeat";
   durationMs: number;
 };
+
+export type GameRun = BaseGameRun & (
+  | { gameId: "typeraid"; roomsCleared: number; outcome: "victory" | "defeat" }
+  | { gameId: "wordfall"; wave: number; missedWords: number }
+);
 
 function scoreFields(
   run: GameRun,
   user: ResultOwner,
   achievedAt: number,
 ): Omit<GamePersonalBestDoc, "_id" | "attempts" | "processedRunIds" | "updatedAt"> {
+  const gameFields = run.gameId === "typeraid"
+    ? { roomsCleared: run.roomsCleared, outcome: run.outcome }
+    : { wave: run.wave, missedWords: run.missedWords };
   return {
     userId: user.id,
     gameId: run.gameId,
@@ -36,8 +42,7 @@ function scoreFields(
     accuracy: run.accuracy,
     words: run.words,
     bestCombo: run.bestCombo,
-    roomsCleared: run.roomsCleared,
-    outcome: run.outcome,
+    ...gameFields,
     durationMs: run.durationMs,
     achievedAt,
   };

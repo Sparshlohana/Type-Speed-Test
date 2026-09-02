@@ -48,8 +48,9 @@ Notable choices:
   leaderboard that resets at midnight IST.
 - **Progression**: every valid test earns volume, accuracy, duration, and difficulty XP. Three
   daily goals, streak bonuses, levels, and 17 one-time achievement badges reward consistency.
-- **Arcade leaderboards**: completed game runs keep one compact personal-best row per player and
-  game. TypeRaid ranks score first, then accuracy and completion time.
+- **Arcade games**: TypeRaid turns clean words into roguelike attacks; Wordfall is an endless,
+  accelerating survival run with lives and combos. Game boards keep one compact personal-best row
+  per player and rank score first, then accuracy and run time.
 - **Shortcuts**: `Tab` restarts, `Esc` unfocuses, typing anything starts the test.
 
 The leaderboard ranks each signed-in user's best MongoDB result for the selected mode.

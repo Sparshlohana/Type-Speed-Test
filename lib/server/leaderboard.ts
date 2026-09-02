@@ -102,6 +102,8 @@ export const getTopGameLeaderboard = unstable_cache(
             bestCombo: 1,
             roomsCleared: 1,
             outcome: 1,
+            wave: 1,
+            missedWords: 1,
             attempts: 1,
             durationMs: 1,
           },
@@ -162,6 +164,8 @@ export function toGameLeaderboardEntries(
     bestCombo: entry.bestCombo,
     roomsCleared: entry.roomsCleared,
     outcome: entry.outcome,
+    wave: entry.wave,
+    missedWords: entry.missedWords,
     attempts: entry.attempts,
     isYou: entry.userId === userId,
   }));

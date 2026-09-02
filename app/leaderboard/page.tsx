@@ -12,6 +12,7 @@ import type { QuoteLength } from "@/lib/words";
 
 type BoardKind = "time" | "words" | "quote";
 type BoardCategory = "tests" | "games";
+type GameBoardId = "typeraid" | "wordfall";
 type TimeOption = "15" | "30" | "60" | "custom";
 type Board = { entries: LeaderboardEntry[] | GameLeaderboardEntry[]; yourRank: number | null };
 
@@ -20,8 +21,9 @@ const CATEGORY_OPTIONS: SegmentOption<BoardCategory>[] = [
   { value: "games", label: "Games" },
 ];
 
-const GAME_OPTIONS: SegmentOption<"typeraid">[] = [
+const GAME_OPTIONS: SegmentOption<GameBoardId>[] = [
   { value: "typeraid", label: "TypeRaid" },
+  { value: "wordfall", label: "Wordfall" },
 ];
 
 const TYPE_OPTIONS: SegmentOption<BoardKind>[] = [
@@ -65,7 +67,7 @@ function FilterLabel({ children }: { children: React.ReactNode }) {
 
 export default function LeaderboardPage() {
   const [category, setCategory] = useState<BoardCategory>("tests");
-  const [gameId, setGameId] = useState<"typeraid">("typeraid");
+  const [gameId, setGameId] = useState<GameBoardId>("typeraid");
   const [kind, setKind] = useState<BoardKind>("time");
   const [timeOption, setTimeOption] = useState<TimeOption>("30");
   const [customSeconds, setCustomSeconds] = useState(45);
@@ -91,8 +93,12 @@ export default function LeaderboardPage() {
   const selected = modeKey(mode);
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("game") === "typeraid") {
-      queueMicrotask(() => setCategory("games"));
+    const requestedGame = new URLSearchParams(window.location.search).get("game");
+    if (requestedGame === "typeraid" || requestedGame === "wordfall") {
+      queueMicrotask(() => {
+        setGameId(requestedGame);
+        setCategory("games");
+      });
     }
   }, []);
 
@@ -151,9 +157,9 @@ export default function LeaderboardPage() {
         ) : (
           <p className="mt-1 text-sm text-sub">
             {board.yourRank
-              ? `You're ranked #${board.yourRank} for ${category === "games" ? "TypeRaid" : modeLabel(mode)}.`
+              ? `You're ranked #${board.yourRank} for ${category === "games" ? gameId === "wordfall" ? "Wordfall" : "TypeRaid" : modeLabel(mode)}.`
               : category === "games"
-                ? "Finish a TypeRaid run to take a place on this board."
+                ? `Finish a ${gameId === "wordfall" ? "Wordfall" : "TypeRaid"} run to take a place on this board.`
                 : `Finish a ${modeLabel(mode)} test while signed in to take a place on this board.`}
           </p>
         )}
@@ -286,18 +292,18 @@ export default function LeaderboardPage() {
               />
             </div>
             <p className="max-w-md text-xs leading-5 text-sub">
-              Each player&apos;s best run is ranked by score, then accuracy, then completion time.
+              Each player&apos;s best {gameId === "wordfall" ? "survival" : "raid"} is ranked by score, then accuracy, then run time.
             </p>
           </div>
         )}
 
         <div className="mt-4 flex flex-col gap-1 border-t border-border/70 pt-3 text-xs text-sub sm:flex-row sm:items-center sm:justify-between">
           <span>
-            Viewing <strong className="font-medium text-text">{category === "games" ? "TypeRaid" : modeLabel(mode)}</strong>
+            Viewing <strong className="font-medium text-text">{category === "games" ? gameId === "wordfall" ? "Wordfall" : "TypeRaid" : modeLabel(mode)}</strong>
           </span>
           <span>
             {category === "games" ? (
-              <Link href="/games/typeraid" className="transition-colors hover:text-accent">Play TypeRaid →</Link>
+              <Link href={`/games/${gameId}`} className="transition-colors hover:text-accent">Play {gameId === "wordfall" ? "Wordfall" : "TypeRaid"} →</Link>
             ) : (
               <><Link href="/daily" className="transition-colors hover:text-accent">Daily</Link> has its own board · Adaptive practice is personal</>
             )}
@@ -331,7 +337,7 @@ export default function LeaderboardPage() {
               {unavailable
                 ? category === "games" ? "Completed runs still remain playable." : "Your typing tests still save locally."
                 : category === "games"
-                  ? "Finish a TypeRaid run to claim the first spot."
+                  ? `Finish a ${gameId === "wordfall" ? "Wordfall" : "TypeRaid"} run to claim the first spot.`
                   : `Sign in and finish a ${modeLabel(mode)} test to claim the first spot.`}
             </p>
           </div>
@@ -342,7 +348,7 @@ export default function LeaderboardPage() {
                 <th className="px-5 py-3 font-medium">Rank</th>
                 <th className="px-5 py-3 font-medium">Player</th>
                 <th className="px-5 py-3 text-right font-medium">Score</th>
-                <th className="px-5 py-3 text-right font-medium">Rooms</th>
+                <th className="px-5 py-3 text-right font-medium">{gameId === "wordfall" ? "Wave" : "Rooms"}</th>
                 <th className="px-5 py-3 text-right font-medium">Accuracy</th>
                 <th className="px-5 py-3 text-right font-medium">WPM</th>
               </tr>
@@ -366,7 +372,7 @@ export default function LeaderboardPage() {
                   </td>
                   <td className="px-5 py-3 text-right font-mono font-semibold tabular-nums text-text">{entry.score.toLocaleString()}</td>
                   <td className="px-5 py-3 text-right font-mono tabular-nums text-sub">
-                    {entry.roomsCleared}/4{entry.outcome === "victory" ? <span className="ml-1 text-accent">✓</span> : null}
+                    {gameId === "wordfall" ? entry.wave ?? 1 : <>{entry.roomsCleared ?? 0}/4{entry.outcome === "victory" ? <span className="ml-1 text-accent">✓</span> : null}</>}
                   </td>
                   <td className="px-5 py-3 text-right font-mono tabular-nums text-sub">{round(entry.accuracy, 1)}%</td>
                   <td className="px-5 py-3 text-right font-mono tabular-nums text-sub">{entry.wpm}</td>

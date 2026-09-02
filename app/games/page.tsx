@@ -61,12 +61,16 @@ export default function GamesPage() {
         </Link>
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
-          <div className="rounded-3xl border border-dashed border-border bg-surface/55 p-6">
-            <div className="grid h-11 w-11 place-items-center rounded-2xl border border-border bg-bg font-mono text-lg text-sub">02</div>
-            <h2 className="mt-8 text-lg font-semibold text-text">Next cabinet</h2>
-            <p className="mt-2 text-sm leading-6 text-sub">The arcade is ready for racers, rhythm runs, and whatever arrives next.</p>
-            <span className="mt-6 inline-block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">Coming soon</span>
-          </div>
+          <Link href="/games/wordfall" className="group rounded-3xl border border-[color-mix(in_srgb,#57d9a3_25%,var(--border))] bg-surface p-6 transition duration-300 hover:-translate-y-1 hover:border-[#57d9a3]/55">
+            <div className="flex items-start justify-between">
+              <div className="grid h-11 w-11 place-items-center rounded-2xl border border-[#57d9a3]/25 bg-[#57d9a3]/10 font-mono text-lg font-bold text-[#57d9a3]">02</div>
+              <span className="text-3xl text-[#57d9a3] transition-transform duration-300 group-hover:translate-y-1">↓</span>
+            </div>
+            <p className="mt-8 font-mono text-[10px] uppercase tracking-[0.16em] text-[#57d9a3]">Survival</p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-text">Wordfall</h2>
+            <p className="mt-2 text-sm leading-6 text-sub">Warm up on falling characters, then survive complete words and faster waves.</p>
+            <span className="mt-6 inline-block text-xs font-semibold text-[#57d9a3]">Start surviving →</span>
+          </Link>
           <div className="rounded-3xl border border-border bg-surface p-6">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Arcade rule</p>
             <p className="mt-3 text-lg font-medium leading-7 text-text">Speed helps. Accuracy keeps you alive.</p>
