@@ -8,6 +8,7 @@ import {
   type DailyLeaderboardEntry,
 } from "@/lib/daily";
 import { collections } from "@/lib/db/mongo";
+import { DAILY_RETENTION_DAYS } from "@/lib/db/result-storage";
 import { getUser } from "@/lib/server/session";
 import { validateResult } from "@/lib/server/validate";
 
@@ -75,6 +76,8 @@ export type SubmitDailyResponse =
   | { ok: true; signedIn: true; rank: number }
   | { ok: false; error: string };
 
+const DAILY_RETENTION_MS = DAILY_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+
 export async function submitDailyResult(input: unknown): Promise<SubmitDailyResponse> {
   const validation = validateResult(input);
   if (!validation.ok) return validation;
@@ -89,10 +92,16 @@ export async function submitDailyResult(input: unknown): Promise<SubmitDailyResp
   if (!user) return { ok: true, signedIn: false };
 
   const { dailyChallengeResults } = await collections();
+  const updatedAt = Date.now();
+  const expiresAt = new Date(updatedAt + DAILY_RETENTION_MS);
   await dailyChallengeResults.updateOne(
     { challengeId: today, userId: user.id },
     {
-      $set: { username: user.name || "TypeFlow user", image: user.image ?? null },
+      $set: {
+        username: user.name || "TypeFlow user",
+        image: user.image ?? null,
+        expiresAt,
+      },
       $setOnInsert: {
         _id: new ObjectId(),
         challengeId: today,
@@ -102,7 +111,7 @@ export async function submitDailyResult(input: unknown): Promise<SubmitDailyResp
         accuracy: result.accuracy,
         consistency: result.consistency,
         durationMs: result.durationMs,
-        updatedAt: Date.now(),
+        updatedAt,
       },
       $inc: { attempts: 1 },
     },
@@ -124,7 +133,8 @@ export async function submitDailyResult(input: unknown): Promise<SubmitDailyResp
           accuracy: result.accuracy,
           consistency: result.consistency,
           durationMs: result.durationMs,
-          updatedAt: Date.now(),
+          updatedAt,
+          expiresAt,
         },
       },
     );

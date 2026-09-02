@@ -10,6 +10,8 @@ npm run dev     # http://localhost:3000
 npm run build   # production build
 npm run lint    # eslint
 npm run db:indexes # create the MongoDB result indexes
+npm run db:optimize # preview the bounded-storage migration
+npm run db:optimize -- --apply # migrate existing results after reviewing the preview
 ```
 
 Copy `.env.example` to `.env.local`, fill in the MongoDB, Better Auth, and Google OAuth
@@ -46,3 +48,12 @@ Notable choices:
 - **Shortcuts**: `Tab` restarts, `Esc` unfocuses, typing anything starts the test.
 
 The leaderboard ranks each signed-in user's best MongoDB result for the selected mode.
+
+## Database retention
+
+MongoDB keeps the latest 200 result summaries and latest 20 detailed sample graphs per user.
+Unusually long tests are downsampled to at most 120 graph points before persistence.
+Personal bests and cumulative key/word analytics live in compact dedicated collections, so
+pruning history does not affect leaderboards or adaptive analytics. Daily leaderboard rows expire
+after 90 days. Run `npm run db:optimize` before deploying this storage layout, review the report,
+then run it again with `-- --apply` to backfill and prune existing data safely.

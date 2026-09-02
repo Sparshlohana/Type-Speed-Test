@@ -530,8 +530,12 @@ export default function StatsPage() {
                         ))}
                       </div>
                     </div>
-                  ) : (
+                  ) : detailSeries.length > 0 ? (
                     <LineChart series={detailSeries} height={230} xLabel="seconds" yLabel="words per minute" xFormat={(value) => `${Math.round(value)}s`} />
+                  ) : (
+                    <div className="flex h-[230px] items-center justify-center rounded-lg border border-dashed border-border px-4 text-center text-xs text-sub">
+                      Detailed speed samples are retained for your latest 20 tests.
+                    </div>
                   )}
                 </div>
                 <div className="rounded-lg border border-border bg-bg p-4">

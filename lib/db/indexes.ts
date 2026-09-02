@@ -6,19 +6,48 @@ const { loadEnvConfig } = nextEnv;
 loadEnvConfig(process.cwd());
 
 export async function createIndexes(): Promise<void> {
-  const { results, dailyChallengeResults } = await collections();
+  const {
+    results,
+    resultSamples,
+    personalBests,
+    userTypingAnalytics,
+    dailyChallengeResults,
+  } = await collections();
   await results.createIndexes([
     { key: { userId: 1, ts: -1 }, name: "results_user_history" },
-    {
-      key: { modeKey: 1, wpm: -1, accuracy: -1 },
-      name: "results_leaderboard",
-    },
     {
       key: { userId: 1, clientId: 1 },
       name: "results_user_client_unique",
       unique: true,
     },
   ]);
+  const legacyLeaderboardIndex = (await results.indexes()).some(
+    (index) => index.name === "results_leaderboard",
+  );
+  if (legacyLeaderboardIndex) await results.dropIndex("results_leaderboard");
+  await resultSamples.createIndexes([
+    {
+      key: { userId: 1, clientId: 1 },
+      name: "result_samples_user_client_unique",
+      unique: true,
+    },
+    { key: { userId: 1, ts: -1 }, name: "result_samples_user_history" },
+  ]);
+  await personalBests.createIndexes([
+    {
+      key: { userId: 1, modeKey: 1 },
+      name: "personal_bests_user_mode_unique",
+      unique: true,
+    },
+    {
+      key: { modeKey: 1, wpm: -1, accuracy: -1 },
+      name: "personal_bests_leaderboard",
+    },
+  ]);
+  await userTypingAnalytics.createIndex(
+    { userId: 1 },
+    { name: "user_typing_analytics_user_unique", unique: true },
+  );
   await dailyChallengeResults.createIndexes([
     {
       key: { challengeId: 1, userId: 1 },
@@ -28,6 +57,11 @@ export async function createIndexes(): Promise<void> {
     {
       key: { challengeId: 1, wpm: -1, accuracy: -1 },
       name: "daily_challenge_leaderboard",
+    },
+    {
+      key: { expiresAt: 1 },
+      name: "daily_challenge_expiry",
+      expireAfterSeconds: 0,
     },
   ]);
 }

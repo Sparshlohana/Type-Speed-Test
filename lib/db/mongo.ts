@@ -21,8 +21,41 @@ export type ResultDoc = {
   chars: CharStats;
   keystrokes: number;
   errors: number;
-  samples: Sample[];
+  /** Legacy inline samples; new writes use result_samples. */
+  samples?: Sample[];
   weaknesses?: WeaknessSummary;
+};
+
+export type ResultSamplesDoc = {
+  _id: ObjectId;
+  userId: string;
+  clientId: string;
+  ts: number;
+  samples: Sample[];
+};
+
+export type PersonalBestDoc = {
+  _id: ObjectId;
+  userId: string;
+  clientId: string;
+  username: string;
+  image: string | null;
+  ts: number;
+  modeKey: string;
+  wpm: number;
+  accuracy: number;
+  consistency: number;
+};
+
+export type UserTypingAnalyticsDoc = {
+  _id: ObjectId;
+  userId: string;
+  tests: number;
+  keyAccuracy?: Record<string, { correct: number; attempts: number }>;
+  keyErrors?: Record<string, number>;
+  wordErrors?: Record<string, number>;
+  processedResultIds: string[];
+  updatedAt: Date;
 };
 
 export type DailyChallengeDoc = {
@@ -38,6 +71,7 @@ export type DailyChallengeDoc = {
   durationMs: number;
   attempts: number;
   updatedAt: number;
+  expiresAt?: Date;
 };
 
 declare global {
@@ -62,11 +96,17 @@ export async function getDb(): Promise<Db> {
 
 export async function collections(): Promise<{
   results: Collection<ResultDoc>;
+  resultSamples: Collection<ResultSamplesDoc>;
+  personalBests: Collection<PersonalBestDoc>;
+  userTypingAnalytics: Collection<UserTypingAnalyticsDoc>;
   dailyChallengeResults: Collection<DailyChallengeDoc>;
 }> {
   const db = await getDb();
   return {
     results: db.collection<ResultDoc>("results"),
+    resultSamples: db.collection<ResultSamplesDoc>("result_samples"),
+    personalBests: db.collection<PersonalBestDoc>("personal_bests"),
+    userTypingAnalytics: db.collection<UserTypingAnalyticsDoc>("user_typing_analytics"),
     dailyChallengeResults: db.collection<DailyChallengeDoc>("daily_challenge_results"),
   };
 }

@@ -1,6 +1,5 @@
 import "server-only";
 
-import type { Document } from "mongodb";
 import { unstable_cache } from "next/cache";
 
 import { collections } from "@/lib/db/mongo";
@@ -9,7 +8,7 @@ import type { LeaderboardEntry } from "@/lib/leaderboard";
 export const LEADERBOARD_CACHE_TAG = "leaderboards";
 
 type RankedRow = {
-  _id: string;
+  userId: string;
   username: string;
   image: string | null;
   wpm: number;
@@ -17,34 +16,20 @@ type RankedRow = {
   consistency: number;
 };
 
-const bestPerUser: Document[] = [
-  { $sort: { wpm: -1, accuracy: -1 } },
-  {
-    $group: {
-      _id: "$userId",
-      username: { $first: "$username" },
-      image: { $first: "$image" },
-      wpm: { $first: "$wpm" },
-      accuracy: { $first: "$accuracy" },
-      consistency: { $first: "$consistency" },
-    },
-  },
-];
-
 /** Shared board data is identical for every visitor, so avoid rebuilding it on every view. */
 export const getTopLeaderboard = unstable_cache(
   async (modeKey: string): Promise<RankedRow[]> => {
-    const { results } = await collections();
-    return results
-      .aggregate<RankedRow>([
-        { $match: { modeKey } },
-        ...bestPerUser,
-        { $sort: { wpm: -1, accuracy: -1 } },
-        { $limit: 50 },
-      ])
+    const { personalBests } = await collections();
+    return personalBests
+      .find(
+        { modeKey },
+        { projection: { _id: 0, userId: 1, username: 1, image: 1, wpm: 1, accuracy: 1, consistency: 1 } },
+      )
+      .sort({ wpm: -1, accuracy: -1 })
+      .limit(50)
       .toArray();
   },
-  ["leaderboard-top"],
+  ["leaderboard-top-v2"],
   { tags: [LEADERBOARD_CACHE_TAG], revalidate: 30 },
 );
 
@@ -53,7 +38,7 @@ export async function getLeaderboardRank(
   userId: string,
   topEntries: RankedRow[],
 ): Promise<number | null> {
-  const visibleEntry = topEntries.find((entry) => entry._id === userId);
+  const visibleEntry = topEntries.find((entry) => entry.userId === userId);
   if (visibleEntry) {
     return topEntries.filter(
       (entry) =>
@@ -63,29 +48,21 @@ export async function getLeaderboardRank(
   }
 
   // Only players outside the visible top 50 need the more expensive exact-rank query.
-  const { results } = await collections();
-  const ownBest = await results.findOne(
+  const { personalBests } = await collections();
+  const ownBest = await personalBests.findOne(
     { userId, modeKey },
     { sort: { wpm: -1, accuracy: -1 }, projection: { wpm: 1, accuracy: 1 } },
   );
   if (!ownBest) return null;
 
-  const rankRows = await results
-    .aggregate<{ count: number }>([
-      { $match: { modeKey } },
-      ...bestPerUser,
-      {
-        $match: {
-          $or: [
-            { wpm: { $gt: ownBest.wpm } },
-            { wpm: ownBest.wpm, accuracy: { $gt: ownBest.accuracy } },
-          ],
-        },
-      },
-      { $count: "count" },
-    ])
-    .toArray();
-  return (rankRows[0]?.count ?? 0) + 1;
+  const ahead = await personalBests.countDocuments({
+    modeKey,
+    $or: [
+      { wpm: { $gt: ownBest.wpm } },
+      { wpm: ownBest.wpm, accuracy: { $gt: ownBest.accuracy } },
+    ],
+  });
+  return ahead + 1;
 }
 
 export function toLeaderboardEntries(
@@ -93,12 +70,12 @@ export function toLeaderboardEntries(
   userId?: string,
 ): LeaderboardEntry[] {
   return entries.map((entry) => ({
-    id: entry._id,
+    id: entry.userId,
     username: entry.username,
     image: entry.image,
     wpm: Math.round(entry.wpm),
     accuracy: entry.accuracy,
     consistency: entry.consistency,
-    isYou: entry._id === userId,
+    isYou: entry.userId === userId,
   }));
 }

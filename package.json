@@ -7,6 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "db:indexes": "node --experimental-strip-types lib/db/indexes.ts",
+    "db:optimize": "node --experimental-strip-types lib/db/optimize-storage.ts",
     "start": "next start",
     "lint": "eslint"
   },

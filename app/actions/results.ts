@@ -1,9 +1,16 @@
 "use server";
 
-import { ObjectId, type OptionalId } from "mongodb";
+import { ObjectId } from "mongodb";
 import { updateTag } from "next/cache";
 
 import { collections, type ResultDoc } from "@/lib/db/mongo";
+import {
+  addToUserAnalytics,
+  pruneUserStorage,
+  storeResultSamples,
+  toResultDocument,
+  updatePersonalBest,
+} from "@/lib/db/result-storage";
 import { LEADERBOARD_CACHE_TAG } from "@/lib/server/leaderboard";
 import { getUser, requireUser } from "@/lib/server/session";
 import { validateResult } from "@/lib/server/validate";
@@ -14,29 +21,7 @@ export type SaveResultResponse =
   | { ok: true; signedIn: true; isPersonalBest: boolean }
   | { ok: false; error: string };
 
-function toDocument(result: StoredResult, user: Awaited<ReturnType<typeof requireUser>>): OptionalId<ResultDoc> {
-  return {
-    userId: user.id,
-    clientId: result.id,
-    username: user.name || "TypeFlow user",
-    image: user.image ?? null,
-    ts: result.ts,
-    mode: result.mode,
-    modeKey: result.modeKey,
-    durationMs: result.durationMs,
-    wpm: result.wpm,
-    raw: result.raw,
-    accuracy: result.accuracy,
-    consistency: result.consistency,
-    chars: result.chars,
-    keystrokes: result.keystrokes,
-    errors: result.errors,
-    samples: result.samples,
-    weaknesses: result.weaknesses,
-  };
-}
-
-function fromDocument(doc: ResultDoc): StoredResult {
+function fromDocument(doc: ResultDoc, samples = doc.samples ?? []): StoredResult {
   return {
     id: doc.clientId,
     ts: doc.ts,
@@ -50,7 +35,7 @@ function fromDocument(doc: ResultDoc): StoredResult {
     chars: doc.chars,
     keystrokes: doc.keystrokes,
     errors: doc.errors,
-    samples: doc.samples ?? [],
+    samples,
     weaknesses: doc.weaknesses,
   };
 }
@@ -62,18 +47,28 @@ export async function saveResult(input: unknown): Promise<SaveResultResponse> {
   const user = await getUser();
   if (!user) return { ok: true, signedIn: false };
 
-  const { results } = await collections();
-  const previousBest = await results.findOne(
+  const { results, personalBests } = await collections();
+  const previousBest = await personalBests.findOne(
     { userId: user.id, modeKey: validation.value.modeKey },
-    { sort: { wpm: -1, accuracy: -1 }, projection: { wpm: 1 } },
+    { projection: { wpm: 1 } },
   );
 
-  const write = await results.updateOne(
+  await results.updateOne(
     { userId: user.id, clientId: validation.value.id },
-    { $setOnInsert: { _id: new ObjectId(), ...toDocument(validation.value, user) } },
+    { $setOnInsert: { _id: new ObjectId(), ...toResultDocument(validation.value, user) } },
     { upsert: true },
   );
-  if (write.upsertedCount > 0) updateTag(LEADERBOARD_CACHE_TAG);
+  const [isPersonalBest] = await Promise.all([
+    updatePersonalBest(user, validation.value),
+    storeResultSamples(user.id, [validation.value]),
+  ]);
+  await addToUserAnalytics(user.id, [validation.value]);
+  await pruneUserStorage(user.id);
+  await results.updateOne(
+    { userId: user.id, clientId: validation.value.id },
+    { $unset: { samples: "" } },
+  );
+  if (isPersonalBest) updateTag(LEADERBOARD_CACHE_TAG);
 
   return {
     ok: true,
@@ -96,17 +91,40 @@ export async function syncLocalResults(inputs: unknown): Promise<{ ok: boolean; 
 
   if (validated.length === 0) return { ok: true };
   const { results } = await collections();
-  const write = await results.bulkWrite(
+  await results.bulkWrite(
     validated.map((result) => ({
       updateOne: {
         filter: { userId: user.id, clientId: result.id },
-        update: { $setOnInsert: { _id: new ObjectId(), ...toDocument(result, user) } },
+        update: { $setOnInsert: { _id: new ObjectId(), ...toResultDocument(result, user) } },
         upsert: true,
       },
     })),
     { ordered: false },
   );
-  if (write.upsertedCount > 0) updateTag(LEADERBOARD_CACHE_TAG);
+  const bestByMode = new Map<string, StoredResult>();
+  for (const result of validated) {
+    const current = bestByMode.get(result.modeKey);
+    if (
+      !current ||
+      result.wpm > current.wpm ||
+      (result.wpm === current.wpm && result.accuracy > current.accuracy)
+    ) {
+      bestByMode.set(result.modeKey, result);
+    }
+  }
+  const bestUpdates = await Promise.all(
+    [...bestByMode.values()].map((result) => updatePersonalBest(user, result)),
+  );
+  await Promise.all([
+    storeResultSamples(user.id, validated),
+    addToUserAnalytics(user.id, validated),
+  ]);
+  await results.updateMany(
+    { userId: user.id, clientId: { $in: validated.map((result) => result.id) } },
+    { $unset: { samples: "" } },
+  );
+  await pruneUserStorage(user.id);
+  if (bestUpdates.some(Boolean)) updateTag(LEADERBOARD_CACHE_TAG);
   return { ok: true };
 }
 
@@ -119,21 +137,36 @@ export async function listResults(limit = 200): Promise<StoredResult[]> {
     .sort({ ts: -1 })
     .limit(safeLimit)
     .toArray();
-  return docs.map(fromDocument);
+  return docs.map((doc) => fromDocument(doc));
 }
 
 /** Fetch the heavy per-second samples only when a user opens one result. */
 export async function getResultDetails(clientId: unknown): Promise<StoredResult | null> {
   const user = await requireUser();
   if (typeof clientId !== "string" || clientId.length < 1 || clientId.length > 128) return null;
-  const { results } = await collections();
-  const doc = await results.findOne({ userId: user.id, clientId });
-  return doc ? fromDocument(doc) : null;
+  const { results, resultSamples } = await collections();
+  const [doc, detailed] = await Promise.all([
+    results.findOne({ userId: user.id, clientId }),
+    resultSamples.findOne({ userId: user.id, clientId }),
+  ]);
+  return doc ? fromDocument(doc, detailed?.samples ?? doc.samples ?? []) : null;
 }
 
 export async function clearResults(): Promise<void> {
   const user = await requireUser();
-  const { results } = await collections();
-  const write = await results.deleteMany({ userId: user.id });
-  if (write.deletedCount > 0) updateTag(LEADERBOARD_CACHE_TAG);
+  const {
+    results,
+    resultSamples,
+    personalBests,
+    userTypingAnalytics,
+    dailyChallengeResults,
+  } = await collections();
+  const writes = await Promise.all([
+    results.deleteMany({ userId: user.id }),
+    resultSamples.deleteMany({ userId: user.id }),
+    personalBests.deleteMany({ userId: user.id }),
+    userTypingAnalytics.deleteMany({ userId: user.id }),
+    dailyChallengeResults.deleteMany({ userId: user.id }),
+  ]);
+  if (writes.some((write) => write.deletedCount > 0)) updateTag(LEADERBOARD_CACHE_TAG);
 }
