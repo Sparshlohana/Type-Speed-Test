@@ -21,7 +21,7 @@ function validateGameRun(input: unknown): GameRun | null {
   const run = input as Record<string, unknown>;
   if (
     typeof run.clientId !== "string" || run.clientId.length < 1 || run.clientId.length > 128 ||
-    (run.gameId !== "typeraid" && run.gameId !== "wordfall") ||
+    (run.gameId !== "typeraid" && run.gameId !== "wordfall" && run.gameId !== "nemesis") ||
     !Number.isInteger(run.score) || !finiteNumber(run.score, 0, 1_000_000_000) ||
     !Number.isInteger(run.wpm) || !finiteNumber(run.wpm, 0, 1_000) ||
     !finiteNumber(run.accuracy, 0, 100) ||
@@ -36,6 +36,11 @@ function validateGameRun(input: unknown): GameRun | null {
       (run.outcome !== "victory" && run.outcome !== "defeat") ||
       (run.outcome === "victory" && run.roomsCleared !== 4) ||
       (run.outcome === "defeat" && run.roomsCleared >= 4)
+    ) return null;
+  } else if (run.gameId === "nemesis") {
+    if (
+      !Number.isInteger(run.nemesisLevel) || !finiteNumber(run.nemesisLevel, 1, 12) ||
+      (run.outcome !== "victory" && run.outcome !== "defeat")
     ) return null;
   } else if (
     !Number.isInteger(run.wave) || !finiteNumber(run.wave, 1, 100) ||

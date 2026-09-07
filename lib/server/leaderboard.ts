@@ -104,6 +104,7 @@ export const getTopGameLeaderboard = unstable_cache(
             outcome: 1,
             wave: 1,
             missedWords: 1,
+            nemesisLevel: 1,
             attempts: 1,
             durationMs: 1,
           },
@@ -113,7 +114,7 @@ export const getTopGameLeaderboard = unstable_cache(
       .limit(50)
       .toArray();
   },
-  ["game-leaderboard-top-v1"],
+  ["game-leaderboard-top-v2"],
   { tags: [LEADERBOARD_CACHE_TAG], revalidate: 30 },
 );
 
@@ -166,6 +167,7 @@ export function toGameLeaderboardEntries(
     outcome: entry.outcome,
     wave: entry.wave,
     missedWords: entry.missedWords,
+    nemesisLevel: entry.nemesisLevel,
     attempts: entry.attempts,
     isYou: entry.userId === userId,
   }));

@@ -70,7 +70,7 @@ export type UserProgressDoc = {
 export type GamePersonalBestDoc = {
   _id: ObjectId;
   userId: string;
-  gameId: "typeraid" | "wordfall";
+  gameId: "typeraid" | "wordfall" | "nemesis";
   clientId: string;
   username: string;
   image: string | null;
@@ -83,6 +83,7 @@ export type GamePersonalBestDoc = {
   outcome?: "victory" | "defeat";
   wave?: number;
   missedWords?: number;
+  nemesisLevel?: number;
   durationMs: number;
   attempts: number;
   processedRunIds: string[];

@@ -42,6 +42,8 @@
   --raid-rare: #1769bd;
   --raid-epic: #773ab8;
   --raid-legendary: #996000;
+  --nemesis-text: #c02747;
+  --nemesis-bone: #7c6f86;
 
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --dur-fast: 150ms;
@@ -83,6 +85,8 @@
     --raid-rare: #5ea6ff;
     --raid-epic: #b77cff;
     --raid-legendary: #ffb84d;
+    --nemesis-text: #ff5470;
+    --nemesis-bone: #c9c3d4;
   }
 }
 
@@ -119,6 +123,8 @@
   --raid-rare: #5ea6ff;
   --raid-epic: #b77cff;
   --raid-legendary: #ffb84d;
+  --nemesis-text: #ff5470;
+  --nemesis-bone: #c9c3d4;
 }
 
 @theme inline {
@@ -148,6 +154,8 @@
   --color-raid-success: var(--raid-success-text);
   --color-raid-danger: var(--raid-danger-text);
   --color-raid-warning: var(--raid-warning-text);
+  --color-nemesis: var(--nemesis-text);
+  --color-nemesis-bone: var(--nemesis-bone);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -555,4 +563,156 @@ body {
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Nemesis duel
+
+   The arena reads as a mirror: the player's half sits upright, the nemesis half
+   is the same surface flipped and bled through with red. Every motion class
+   degrades to a static layout under reduced motion.
+--------------------------------------------------------------------------- */
+
+.nemesis-shell {
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--nemesis-text) 13%, transparent), transparent 44%),
+    radial-gradient(circle at 50% 100%, color-mix(in srgb, var(--raid-accent-text) 8%, transparent), transparent 40%),
+    var(--raid-bg);
+}
+
+/* Diagonal vein field, mirrored across the centre line like a folded page. */
+.nemesis-veins {
+  background-image:
+    repeating-linear-gradient(
+      52deg,
+      transparent 0,
+      transparent 46px,
+      color-mix(in srgb, var(--nemesis-text) 7%, transparent) 46px,
+      color-mix(in srgb, var(--nemesis-text) 7%, transparent) 47px
+    ),
+    repeating-linear-gradient(
+      -52deg,
+      transparent 0,
+      transparent 46px,
+      var(--raid-grid-line) 46px,
+      var(--raid-grid-line) 47px
+    );
+  mask-image: radial-gradient(ellipse at center, black, transparent 76%);
+}
+
+.nemesis-scanlines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 2px,
+    color-mix(in srgb, var(--nemesis-text) 6%, transparent) 3px
+  );
+}
+
+/* The nemesis portrait: its own reflection, inverted and never quite still. */
+.nemesis-avatar {
+  animation: nemesis-breathe 4.6s ease-in-out infinite;
+}
+
+.nemesis-avatar-reflection {
+  transform: scaleY(-1);
+  opacity: 0.22;
+  filter: blur(1px);
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
+}
+
+.nemesis-word {
+  font-variant-ligatures: none;
+  letter-spacing: 0.06em;
+}
+
+/* Mirror curse: the glyphs flip so the reversed reading order is visible, not implied. */
+.nemesis-word-mirrored {
+  transform: scaleX(-1);
+}
+
+/* Veil curse: the word is present in the layout but unreadable. */
+.nemesis-word-veiled {
+  color: transparent;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--nemesis-text) 55%, transparent);
+}
+
+.nemesis-glitch {
+  position: relative;
+  animation: nemesis-glitch 3.1s steps(1, end) infinite;
+}
+
+.nemesis-glitch::after {
+  position: absolute;
+  inset: 0;
+  color: var(--nemesis-text);
+  content: attr(data-glitch);
+  clip-path: inset(42% 0 38% 0);
+  opacity: 0.65;
+  transform: translateX(-2px);
+  pointer-events: none;
+}
+
+.nemesis-fuse-bar {
+  transition: width 100ms linear, background-color 220ms var(--ease);
+}
+
+.nemesis-impact {
+  animation: nemesis-impact 320ms var(--ease);
+}
+
+.nemesis-strike-in {
+  animation: nemesis-strike-in 240ms var(--ease) both;
+}
+
+.nemesis-enter {
+  animation: nemesis-enter 520ms var(--ease) both;
+}
+
+.nemesis-marked {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--nemesis-text) 42%, transparent),
+    0 0 42px -14px var(--nemesis-text);
+}
+
+@keyframes nemesis-enter {
+  from { opacity: 0; transform: translateY(16px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes nemesis-strike-in {
+  from { opacity: 0; filter: blur(7px); letter-spacing: 0.3em; }
+  to { opacity: 1; filter: blur(0); letter-spacing: 0.06em; }
+}
+
+@keyframes nemesis-impact {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-9px); filter: brightness(1.7); }
+  55% { transform: translateX(7px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes nemesis-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-7px) scale(1.02); }
+}
+
+@keyframes nemesis-glitch {
+  0%, 92%, 100% { transform: translateX(0); }
+  94% { transform: translateX(2px) skewX(-6deg); }
+  96% { transform: translateX(-2px) skewX(5deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nemesis-avatar,
+  .nemesis-glitch,
+  .nemesis-impact,
+  .nemesis-strike-in,
+  .nemesis-enter {
+    animation: none;
+  }
+
+  .nemesis-glitch::after {
+    display: none;
+  }
 }

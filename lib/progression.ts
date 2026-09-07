@@ -28,6 +28,8 @@ export type AchievementId =
   | "arcade_time_30"
   | "typeraid_victory"
   | "wordfall_wave_5"
+  | "nemesis_slain"
+  | "nemesis_level_5"
   | "game_combo_20"
   | "level_5"
   | "level_10";
@@ -53,6 +55,8 @@ export type ProgressState = {
   totalGameDurationMs: number;
   typeRaidVictories: number;
   bestWordfallWave: number;
+  nemesisWins: number;
+  bestNemesisLevel: number;
   bestGameCombo: number;
   dailyChallenges: number;
   dailyChallengeDays: string[];
@@ -154,6 +158,8 @@ export const ACHIEVEMENTS: readonly AchievementDefinition[] = [
   { id: "arcade_time_30", title: "Game Time", description: "Spend 30 minutes playing arcade games.", symbol: "30m", xp: 175 },
   { id: "typeraid_victory", title: "Void Breaker", description: "Win a TypeRaid run.", symbol: "TR", xp: 150 },
   { id: "wordfall_wave_5", title: "Signal Keeper", description: "Reach wave 5 in Wordfall.", symbol: "W5", xp: 125 },
+  { id: "nemesis_slain", title: "Know Thyself", description: "Defeat your Nemesis.", symbol: "NX", xp: 175 },
+  { id: "nemesis_level_5", title: "Exorcist", description: "Defeat a level 5 or higher Nemesis.", symbol: "N5", xp: 350 },
   { id: "game_combo_20", title: "Combo Current", description: "Build a 20-word combo in an arcade game.", symbol: "20x", xp: 125 },
   { id: "level_5", title: "Flow Builder", description: "Reach level 5.", symbol: "L5", xp: 150 },
   { id: "level_10", title: "Flow Master", description: "Reach level 10.", symbol: "L10", xp: 300 },
@@ -185,6 +191,8 @@ export function createEmptyProgress(now = Date.now()): ProgressState {
     totalGameDurationMs: 0,
     typeRaidVictories: 0,
     bestWordfallWave: 0,
+    nemesisWins: 0,
+    bestNemesisLevel: 0,
     bestGameCombo: 0,
     dailyChallenges: 0,
     dailyChallengeDays: [],
@@ -206,6 +214,8 @@ function normalizeProgress(state: ProgressState): ProgressState {
     totalGameDurationMs: state.totalGameDurationMs ?? 0,
     typeRaidVictories: state.typeRaidVictories ?? 0,
     bestWordfallWave: state.bestWordfallWave ?? 0,
+    nemesisWins: state.nemesisWins ?? 0,
+    bestNemesisLevel: state.bestNemesisLevel ?? 0,
     bestGameCombo: state.bestGameCombo ?? 0,
     processedGameRunIds: state.processedGameRunIds ?? [],
   };
@@ -260,7 +270,7 @@ function gameXp(run: GameRun): number {
   const time = Math.min(20, Math.floor(run.durationMs / 30_000) * 5);
   const volume = Math.min(20, Math.floor(run.words / 10) * 5);
   const accuracy = run.accuracy >= 98 ? 15 : run.accuracy >= 90 ? 8 : 0;
-  const victory = run.gameId === "typeraid" && run.outcome === "victory" ? 15 : 0;
+  const victory = (run.gameId === "typeraid" || run.gameId === "nemesis") && run.outcome === "victory" ? 15 : 0;
   return 20 + time + volume + accuracy + victory;
 }
 
@@ -290,6 +300,8 @@ function achievementReached(
     case "arcade_time_30": return state.totalGameDurationMs >= 30 * 60 * 1000;
     case "typeraid_victory": return state.typeRaidVictories >= 1;
     case "wordfall_wave_5": return state.bestWordfallWave >= 5;
+    case "nemesis_slain": return state.nemesisWins >= 1;
+    case "nemesis_level_5": return state.bestNemesisLevel >= 5;
     case "game_combo_20": return state.bestGameCombo >= 20;
     case "level_5": return levelForXp(state.xp) >= 5;
     case "level_10": return levelForXp(state.xp) >= 10;
@@ -508,6 +520,11 @@ export function applyGameRunToProgress(
     totalGameDurationMs: current.totalGameDurationMs + run.durationMs,
     typeRaidVictories: current.typeRaidVictories + (run.gameId === "typeraid" && run.outcome === "victory" ? 1 : 0),
     bestWordfallWave: Math.max(current.bestWordfallWave, run.gameId === "wordfall" ? run.wave : 0),
+    nemesisWins: current.nemesisWins + (run.gameId === "nemesis" && run.outcome === "victory" ? 1 : 0),
+    bestNemesisLevel: Math.max(
+      current.bestNemesisLevel,
+      run.gameId === "nemesis" && run.outcome === "victory" ? run.nemesisLevel : 0,
+    ),
     bestGameCombo: Math.max(current.bestGameCombo, run.bestCombo),
     currentStreak,
     longestStreak: Math.max(current.longestStreak, currentStreak),
@@ -595,6 +612,8 @@ export function achievementProgress(
     case "arcade_time_30": current = state.totalGameDurationMs; target = 30 * 60 * 1000; unit = "ms played"; break;
     case "typeraid_victory": current = state.typeRaidVictories; target = 1; unit = "victory"; break;
     case "wordfall_wave_5": current = state.bestWordfallWave; target = 5; unit = "wave"; break;
+    case "nemesis_slain": current = state.nemesisWins; target = 1; unit = "Nemesis defeated"; break;
+    case "nemesis_level_5": current = state.bestNemesisLevel; target = 5; unit = "Nemesis level"; break;
     case "game_combo_20": current = state.bestGameCombo; target = 20; unit = "combo"; break;
     case "level_5": current = levelForXp(state.xp); target = 5; unit = "level"; break;
     case "level_10": current = levelForXp(state.xp); target = 10; unit = "level"; break;

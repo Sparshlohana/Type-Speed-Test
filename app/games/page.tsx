@@ -71,12 +71,25 @@ export default function GamesPage() {
             <p className="mt-2 text-sm leading-6 text-sub">Warm up on falling characters, then survive complete words and faster waves.</p>
             <span className="mt-6 inline-block text-xs font-semibold text-[#57d9a3]">Start surviving →</span>
           </Link>
-          <div className="rounded-3xl border border-border bg-surface p-6">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Arcade rule</p>
-            <p className="mt-3 text-lg font-medium leading-7 text-text">Speed helps. Accuracy keeps you alive.</p>
-            <p className="mt-3 text-xs leading-5 text-sub">Every game still trains real typing skill—even when a monster is trying to delete you.</p>
-          </div>
+          <Link href="/games/nemesis" className="group rounded-3xl border border-[color-mix(in_srgb,#ff5470_25%,var(--border))] bg-surface p-6 transition duration-300 hover:-translate-y-1 hover:border-[#ff5470]/55">
+            <div className="flex items-start justify-between">
+              <div className="grid h-11 w-11 place-items-center rounded-2xl border border-[#ff5470]/25 bg-[#ff5470]/10 font-mono text-lg font-bold text-[#ff5470]">03</div>
+              <span className="text-3xl text-[#ff5470] transition-transform duration-300 group-hover:-rotate-12">◑</span>
+            </div>
+            <p className="mt-8 font-mono text-[10px] uppercase tracking-[0.16em] text-[#ff5470]">Duel</p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-text">Nemesis</h2>
+            <p className="mt-2 text-sm leading-6 text-sub">Fight a rival built from the keys you actually miss. It learns mid-duel and evolves between them.</p>
+            <span className="mt-6 inline-block text-xs font-semibold text-[#ff5470]">Meet your rival →</span>
+          </Link>
         </div>
+      </section>
+
+      <section className="mt-5 flex flex-col gap-2 rounded-3xl border border-border bg-surface p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">Arcade rule</p>
+          <p className="mt-2 text-lg font-medium leading-7 text-text">Speed helps. Accuracy keeps you alive.</p>
+        </div>
+        <p className="max-w-md text-xs leading-5 text-sub">Every game still trains real typing skill—even when a monster is trying to delete you.</p>
       </section>
     </div>
   );

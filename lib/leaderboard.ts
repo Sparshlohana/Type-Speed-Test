@@ -21,6 +21,7 @@ export type GameLeaderboardEntry = {
   outcome?: "victory" | "defeat";
   wave?: number;
   missedWords?: number;
+  nemesisLevel?: number;
   attempts: number;
   isYou?: boolean;
 };

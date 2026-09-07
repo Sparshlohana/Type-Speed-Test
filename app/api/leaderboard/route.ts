@@ -15,7 +15,7 @@ const MODE_KEY_PATTERN = /^(time|words|quote):[a-z0-9-]+$/;
 export async function GET(request: NextRequest) {
   const gameId = request.nextUrl.searchParams.get("gameId");
   if (gameId !== null) {
-    if (gameId !== "typeraid" && gameId !== "wordfall") {
+    if (gameId !== "typeraid" && gameId !== "wordfall" && gameId !== "nemesis") {
       return Response.json({ entries: [], yourRank: null }, { status: 400 });
     }
     const [topEntries, user] = await Promise.all([getTopGameLeaderboard(gameId), getUser()]);
