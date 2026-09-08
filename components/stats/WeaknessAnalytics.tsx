@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { buildWeaknessAnalytics, type KeyWeakness } from "@/lib/weakness";
+import { buildWeaknessAnalytics, type KeyWeakness, type WeaknessSummary } from "@/lib/weakness";
 import type { StoredResult } from "@/lib/storage";
 
 type KeyShape = { key: string; label?: string; width?: number };
@@ -87,8 +87,17 @@ function displayKey(value: string): string {
   return value;
 }
 
-export function WeaknessAnalytics({ results }: { results: readonly StoredResult[] }) {
-  const analytics = buildWeaknessAnalytics(results);
+export function WeaknessAnalytics({
+  results,
+  duels = null,
+  duelCount = 0,
+}: {
+  results: readonly StoredResult[];
+  /** The Nemesis scar ledger as one result-shaped row, kept separate so it can be labelled. */
+  duels?: { weaknesses: WeaknessSummary } | null;
+  duelCount?: number;
+}) {
+  const analytics = buildWeaknessAnalytics(duels ? [duels, ...results] : results);
   const accuracyKeys = analytics.keys.filter((key) => key.accuracy !== null);
   const rankedAccuracyKeys = accuracyKeys.filter((key) => key.attempts >= 3);
   const weakestKey = [...(rankedAccuracyKeys.length > 0 ? rankedAccuracyKeys : accuracyKeys)]
@@ -96,7 +105,8 @@ export function WeaknessAnalytics({ results }: { results: readonly StoredResult[
   const trackedFingers = analytics.fingers.filter((finger) => finger.accuracy !== null);
   const weakestFinger = [...trackedFingers]
     .sort((a, b) => (a.accuracy ?? 100) - (b.accuracy ?? 100) || b.attempts - a.attempts)[0];
-  const topPair = analytics.keyErrors[0];
+  const confusions = analytics.keyErrors.filter((item) => item.expected && item.actual);
+  const topPair = confusions[0];
   const hasSignals = analytics.trackedAttempts > 0 || analytics.totalKeyErrors > 0 || analytics.totalWordErrors > 0;
 
   return (
@@ -157,7 +167,10 @@ export function WeaknessAnalytics({ results }: { results: readonly StoredResult[
             <div className="rounded-lg border border-border bg-bg p-3">
               <p className="text-[10px] uppercase tracking-[0.12em] text-sub">Tests analysed</p>
               <p className="mt-1 font-mono text-2xl font-semibold text-text">{analytics.accuracyTests}</p>
-              <p className="text-[10px] text-sub">of {results.length} matching</p>
+              <p className="text-[10px] text-sub">
+                of {results.length} matching
+                {duelCount > 0 ? ` · ${duelCount} Nemesis ${duelCount === 1 ? "duel" : "duels"}` : ""}
+              </p>
             </div>
           </div>
 
@@ -216,9 +229,12 @@ export function WeaknessAnalytics({ results }: { results: readonly StoredResult[
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-lg border border-border bg-bg p-4">
                 <h3 className="text-sm font-medium text-text">Common confusions</h3>
-                <p className="mt-0.5 text-[11px] text-sub">What you pressed instead of the target.</p>
+                <p className="mt-0.5 text-[11px] text-sub">
+                  What you pressed instead of the target. Duel scars record only the key that
+                  broke, so they are counted in the heatmap rather than listed here.
+                </p>
                 <ol className="mt-3 space-y-2">
-                  {analytics.keyErrors.slice(0, 6).map((item, index) => (
+                  {confusions.slice(0, 6).map((item, index) => (
                     <li
                       key={`${item.expected}-${item.actual}`}
                       className="flex items-center justify-between gap-3 border-b border-border/60 pb-2 text-xs last:border-0"

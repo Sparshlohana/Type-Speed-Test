@@ -9,6 +9,7 @@ import { WeaknessAnalytics } from "@/components/stats/WeaknessAnalytics";
 import { Button } from "@/components/ui/Button";
 import { StatTile } from "@/components/ui/Card";
 import { Segmented } from "@/components/ui/Segmented";
+import { loadScarLedger, scarResult, type ScarLedger } from "@/lib/nemesis-ledger";
 import { LoadingStatus, Skeleton } from "@/components/ui/Skeleton";
 import { modeLabel } from "@/lib/engine";
 import { formatDuration, formatRelativeTime, round } from "@/lib/format";
@@ -107,6 +108,15 @@ export default function StatsPage() {
   const [detail, setDetail] = useState<StoredResult | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [openedAt] = useState(Date.now);
+  /** Nemesis duel scars, read off the main thread because this page server-renders. */
+  const [ledger, setLedger] = useState<ScarLedger | null>(null);
+
+  useEffect(() => {
+    queueMicrotask(() => setLedger(loadScarLedger()));
+  }, []);
+
+  const duelScars = useMemo(() => (ledger ? scarResult(ledger) : null), [ledger]);
+  const duelCount = ledger?.duels ?? 0;
 
   const modeOptions = useMemo(() => {
     const modes = new Map<string, string>();
@@ -450,7 +460,7 @@ export default function StatsPage() {
             </div>
           </section>
 
-          <WeaknessAnalytics results={filtered} />
+          <WeaknessAnalytics results={filtered} duels={duelScars} duelCount={duelCount} />
 
           <section className="mt-4 grid gap-4 lg:grid-cols-2">
             <div className="overflow-x-auto rounded-xl border border-border bg-surface">

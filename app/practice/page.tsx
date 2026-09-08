@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { TestRunner } from "@/components/typing/TestRunner";
 import { LoadingStatus, Skeleton } from "@/components/ui/Skeleton";
 import type { FinishedResult } from "@/hooks/useTypingTest";
 import type { Mode } from "@/lib/engine";
+import { loadScarLedger, scarResult, type ScarLedger } from "@/lib/nemesis-ledger";
 import { resultsStore } from "@/lib/store";
 import {
   aggregateWeaknesses,
@@ -38,10 +39,18 @@ function coachingMessage(
 
   const key = profile.keyErrors[0];
   const word = profile.wordErrors[0];
-  if (key?.expected) {
+  if (key?.expected && key.actual) {
     return {
       title: `Focus on “${key.expected}”`,
       body: `You often hit “${key.actual}” instead${word ? `, especially around “${word.word}”` : ""}. Cleaner presses here mean fewer corrections and higher WPM.`,
+    };
+  }
+
+  // Duel scars record the key that broke without the key that replaced it.
+  if (key?.expected) {
+    return {
+      title: `Focus on “${key.expected}”`,
+      body: "Your Nemesis duels keep breaking on this key. This set puts it in front of you without a fuse attached.",
     };
   }
 
@@ -73,13 +82,21 @@ export default function PracticePage() {
     resultsStore.get,
     resultsStore.getServer,
   );
+  const [ledger, setLedger] = useState<ScarLedger | null>(null);
+
+  useEffect(() => {
+    queueMicrotask(() => setLedger(loadScarLedger()));
+  }, []);
+
   const profile = useMemo(() => {
     const latest = latestFinished?.result;
     const current = latest
       ? [latest, ...results.filter((result) => result.id !== latest.id)]
       : results;
-    return aggregateWeaknesses(current);
-  }, [latestFinished, results]);
+    // The scar row goes first: `aggregateWeaknesses` only reads the newest results.
+    const scar = ledger ? scarResult(ledger) : null;
+    return aggregateWeaknesses(scar ? [scar, ...current] : current);
+  }, [latestFinished, ledger, results]);
   const coaching = useMemo(
     () => coachingMessage(profile, latestFinished?.result.weaknesses),
     [latestFinished, profile],
@@ -164,7 +181,8 @@ export default function PracticePage() {
                 <span key={`${item.expected}-${item.actual}`}>
                   {index > 0 ? " · " : ""}
                   <span className="font-mono text-text">
-                    {item.expected || "extra"}→{item.actual}
+                    {item.expected || "extra"}
+                    {item.actual ? `→${item.actual}` : " (duels)"}
                   </span>{" "}
                   ×{item.count}
                 </span>

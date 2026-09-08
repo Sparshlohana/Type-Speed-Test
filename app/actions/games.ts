@@ -16,6 +16,15 @@ function finiteNumber(value: unknown, min: number, max: number): value is number
   return typeof value === "number" && Number.isFinite(value) && value >= min && value <= max;
 }
 
+function optionalBoolean(value: unknown): boolean {
+  return value === undefined || typeof value === "boolean";
+}
+
+function optionalInteger(value: unknown, min: number, max: number): boolean {
+  return value === undefined || (Number.isInteger(value) && finiteNumber(value, min, max));
+}
+
+// The return below is a cast, not a parse, so every accepted field needs a check above.
 function validateGameRun(input: unknown): GameRun | null {
   if (!input || typeof input !== "object") return null;
   const run = input as Record<string, unknown>;
@@ -40,7 +49,11 @@ function validateGameRun(input: unknown): GameRun | null {
   } else if (run.gameId === "nemesis") {
     if (
       !Number.isInteger(run.nemesisLevel) || !finiteNumber(run.nemesisLevel, 1, 12) ||
-      (run.outcome !== "victory" && run.outcome !== "defeat")
+      (run.outcome !== "victory" && run.outcome !== "defeat") ||
+      !optionalBoolean(run.nemesisFlawless) ||
+      !optionalInteger(run.nemesisAbilitiesUsed, 0, 10_000) ||
+      !optionalBoolean(run.nemesisFullKit) ||
+      !optionalInteger(run.nemesisMasteredKeys, 0, 64)
     ) return null;
   } else if (
     !Number.isInteger(run.wave) || !finiteNumber(run.wave, 1, 100) ||

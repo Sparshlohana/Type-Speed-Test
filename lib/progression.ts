@@ -30,6 +30,11 @@ export type AchievementId =
   | "wordfall_wave_5"
   | "nemesis_slain"
   | "nemesis_level_5"
+  | "nemesis_level_10"
+  | "nemesis_flawless"
+  | "nemesis_streak_3"
+  | "nemesis_keys_5"
+  | "nemesis_full_kit"
   | "game_combo_20"
   | "level_5"
   | "level_10";
@@ -57,6 +62,12 @@ export type ProgressState = {
   bestWordfallWave: number;
   nemesisWins: number;
   bestNemesisLevel: number;
+  nemesisFlawlessWins: number;
+  nemesisWinStreak: number;
+  bestNemesisWinStreak: number;
+  /** High-water mark of keys the duels have proven clean. */
+  nemesisMasteredKeys: number;
+  nemesisFullKitDuels: number;
   bestGameCombo: number;
   dailyChallenges: number;
   dailyChallengeDays: string[];
@@ -160,6 +171,11 @@ export const ACHIEVEMENTS: readonly AchievementDefinition[] = [
   { id: "wordfall_wave_5", title: "Signal Keeper", description: "Reach wave 5 in Wordfall.", symbol: "W5", xp: 125 },
   { id: "nemesis_slain", title: "Know Thyself", description: "Defeat your Nemesis.", symbol: "NX", xp: 175 },
   { id: "nemesis_level_5", title: "Exorcist", description: "Defeat a level 5 or higher Nemesis.", symbol: "N5", xp: 350 },
+  { id: "nemesis_level_10", title: "Sovereign", description: "Defeat a level 10 or higher Nemesis.", symbol: "N10", xp: 150 },
+  { id: "nemesis_flawless", title: "Unmarked", description: "Beat your Nemesis without a single mistake or burned word.", symbol: "N0", xp: 120 },
+  { id: "nemesis_streak_3", title: "Three In A Row", description: "Win three Nemesis duels back to back.", symbol: "N3x", xp: 100 },
+  { id: "nemesis_keys_5", title: "Reclaimed", description: "Take back 5 keys from your Nemesis.", symbol: "K5", xp: 90 },
+  { id: "nemesis_full_kit", title: "Full Kit", description: "Use every unlocked ability in a single duel.", symbol: "NK", xp: 80 },
   { id: "game_combo_20", title: "Combo Current", description: "Build a 20-word combo in an arcade game.", symbol: "20x", xp: 125 },
   { id: "level_5", title: "Flow Builder", description: "Reach level 5.", symbol: "L5", xp: 150 },
   { id: "level_10", title: "Flow Master", description: "Reach level 10.", symbol: "L10", xp: 300 },
@@ -193,6 +209,11 @@ export function createEmptyProgress(now = Date.now()): ProgressState {
     bestWordfallWave: 0,
     nemesisWins: 0,
     bestNemesisLevel: 0,
+    nemesisFlawlessWins: 0,
+    nemesisWinStreak: 0,
+    bestNemesisWinStreak: 0,
+    nemesisMasteredKeys: 0,
+    nemesisFullKitDuels: 0,
     bestGameCombo: 0,
     dailyChallenges: 0,
     dailyChallengeDays: [],
@@ -216,6 +237,11 @@ function normalizeProgress(state: ProgressState): ProgressState {
     bestWordfallWave: state.bestWordfallWave ?? 0,
     nemesisWins: state.nemesisWins ?? 0,
     bestNemesisLevel: state.bestNemesisLevel ?? 0,
+    nemesisFlawlessWins: state.nemesisFlawlessWins ?? 0,
+    nemesisWinStreak: state.nemesisWinStreak ?? 0,
+    bestNemesisWinStreak: state.bestNemesisWinStreak ?? 0,
+    nemesisMasteredKeys: state.nemesisMasteredKeys ?? 0,
+    nemesisFullKitDuels: state.nemesisFullKitDuels ?? 0,
     bestGameCombo: state.bestGameCombo ?? 0,
     processedGameRunIds: state.processedGameRunIds ?? [],
   };
@@ -302,6 +328,11 @@ function achievementReached(
     case "wordfall_wave_5": return state.bestWordfallWave >= 5;
     case "nemesis_slain": return state.nemesisWins >= 1;
     case "nemesis_level_5": return state.bestNemesisLevel >= 5;
+    case "nemesis_level_10": return state.bestNemesisLevel >= 10;
+    case "nemesis_flawless": return state.nemesisFlawlessWins >= 1;
+    case "nemesis_streak_3": return state.bestNemesisWinStreak >= 3;
+    case "nemesis_keys_5": return state.nemesisMasteredKeys >= 5;
+    case "nemesis_full_kit": return state.nemesisFullKitDuels >= 1;
     case "game_combo_20": return state.bestGameCombo >= 20;
     case "level_5": return levelForXp(state.xp) >= 5;
     case "level_10": return levelForXp(state.xp) >= 10;
@@ -471,6 +502,20 @@ export function applyResultToProgress(
   };
 }
 
+/** The duel-shaped half of a game run, kept out of the main state literal. */
+function nemesisCounters(current: ProgressState, run: GameRun): Partial<ProgressState> {
+  if (run.gameId !== "nemesis") return {};
+  const won = run.outcome === "victory";
+  const nemesisWinStreak = won ? current.nemesisWinStreak + 1 : 0;
+  return {
+    nemesisWinStreak,
+    bestNemesisWinStreak: Math.max(current.bestNemesisWinStreak, nemesisWinStreak),
+    nemesisFlawlessWins: current.nemesisFlawlessWins + (won && run.nemesisFlawless ? 1 : 0),
+    nemesisMasteredKeys: Math.max(current.nemesisMasteredKeys, run.nemesisMasteredKeys ?? 0),
+    nemesisFullKitDuels: current.nemesisFullKitDuels + (run.nemesisFullKit ? 1 : 0),
+  };
+}
+
 export function applyGameRunToProgress(
   current: ProgressState,
   run: GameRun,
@@ -525,6 +570,7 @@ export function applyGameRunToProgress(
       current.bestNemesisLevel,
       run.gameId === "nemesis" && run.outcome === "victory" ? run.nemesisLevel : 0,
     ),
+    ...nemesisCounters(current, run),
     bestGameCombo: Math.max(current.bestGameCombo, run.bestCombo),
     currentStreak,
     longestStreak: Math.max(current.longestStreak, currentStreak),
@@ -614,6 +660,11 @@ export function achievementProgress(
     case "wordfall_wave_5": current = state.bestWordfallWave; target = 5; unit = "wave"; break;
     case "nemesis_slain": current = state.nemesisWins; target = 1; unit = "Nemesis defeated"; break;
     case "nemesis_level_5": current = state.bestNemesisLevel; target = 5; unit = "Nemesis level"; break;
+    case "nemesis_level_10": current = state.bestNemesisLevel; target = 10; unit = "Nemesis level"; break;
+    case "nemesis_flawless": current = state.nemesisFlawlessWins; target = 1; unit = "flawless duel"; break;
+    case "nemesis_streak_3": current = state.bestNemesisWinStreak; target = 3; unit = "duels won in a row"; break;
+    case "nemesis_keys_5": current = state.nemesisMasteredKeys; target = 5; unit = "keys taken back"; break;
+    case "nemesis_full_kit": current = state.nemesisFullKitDuels; target = 1; unit = "duel using the full kit"; break;
     case "game_combo_20": current = state.bestGameCombo; target = 20; unit = "combo"; break;
     case "level_5": current = levelForXp(state.xp); target = 5; unit = "level"; break;
     case "level_10": current = levelForXp(state.xp); target = 10; unit = "level"; break;

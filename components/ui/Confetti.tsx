@@ -24,7 +24,7 @@ type ConfettiStyle = CSSProperties & {
   "--confetti-color": string;
 };
 
-export function Confetti({ label }: { label: string }) {
+export function Confetti({ label, kicker = "Test complete" }: { label: string; kicker?: string }) {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
@@ -42,9 +42,9 @@ export function Confetti({ label }: { label: string }) {
         className="pointer-events-none fixed left-1/2 top-20 z-[51] -translate-x-1/2 rounded-xl border border-[color-mix(in_srgb,var(--accent)_35%,var(--border))] bg-bg/95 px-5 py-3 text-center shadow-[var(--shadow)] backdrop-blur-md"
       >
         <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-accent">
-          Test complete
+          {kicker}
         </p>
-        <p className="mt-1 whitespace-nowrap text-sm font-semibold text-text">{label} finished</p>
+        <p className="mt-1 whitespace-nowrap text-sm font-semibold text-text">{label}</p>
       </div>
       <div aria-hidden className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
         {PIECES.map((piece) => (

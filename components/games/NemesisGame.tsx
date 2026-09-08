@@ -4,39 +4,89 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { saveGameRun } from "@/app/actions/games";
+import { syncNemesisIdentity } from "@/app/actions/nemesis";
+import { Confetti } from "@/components/ui/Confetti";
+import { Toast } from "@/components/ui/Toast";
+import { useNemesisSync } from "@/hooks/useNemesisSync";
+import { useSettings } from "@/hooks/useSettings";
 import { achievementById, type ProgressReward } from "@/lib/progression";
 import { progressionStore } from "@/lib/progression-store";
 import {
+  ABILITIES,
   CURSES,
+  NEMESIS_CHARGE_MAX,
   NEMESIS_PLAYER_HP,
-  NEMESIS_PURGE_COST,
+  abilitiesUsed,
+  abilityStatus,
   advanceNemesis,
   createNemesisRun,
   curseById,
   evolveIdentity,
-  loadNemesisIdentity,
+  mutationById,
   nemesisAccuracy,
   nemesisAutopsy,
+  nemesisFlawless,
   nemesisScore,
   nemesisWpm,
-  purgeNemesis,
+  phaseFor,
   reforgeIdentity,
-  saveNemesisIdentity,
   strikeTarget,
   toggleNemesisPause,
   typeNemesisKey,
+  spendAbility,
+  usedFullKit,
+  type AbilityDefinition,
+  type AbilityId,
+  type AbilityStatus,
   type NemesisIdentity,
   type NemesisState,
 } from "@/lib/games/nemesis";
+import {
+  duelStreak,
+  loadDuelHistory,
+  recordDuelResult,
+  type DuelRecord,
+} from "@/lib/nemesis-history";
+import {
+  isKeyBroken,
+  loadScarLedger,
+  recordDuel,
+  scarResult,
+  scarStats,
+  type ScarLedger,
+} from "@/lib/nemesis-ledger";
+import { nemesisStore } from "@/lib/nemesis-store";
+import { playSound } from "@/lib/sound";
 import { resultsStore } from "@/lib/store";
 import { aggregateWeaknesses } from "@/lib/weakness";
 
 const TICK_MS = 80;
+const BEST_KEY = "typeflow.nemesis.best";
+/** Digits are safe binds: forged words are letters only, memory words are filtered to match. */
+const DIGIT_BINDS: Record<string, AbilityId> = { "1": "brand", "2": "recall", "3": "bulwark" };
 
 function runId(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : `nem-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function loadBest(): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    const raw = Number(window.localStorage.getItem(BEST_KEY));
+    return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function saveBest(score: number): void {
+  try {
+    window.localStorage.setItem(BEST_KEY, String(score));
+  } catch {
+    // The server copy is the one that matters; this is only the device's bragging right.
+  }
 }
 
 /** The sigil is drawn from the signature key, so every player's rival looks different. */
@@ -143,43 +193,179 @@ function ArenaHeader({ paused, canPause, onPause }: { paused: boolean; canPause:
   );
 }
 
+/** One ability: its bind, what it costs, and how long until it answers again. */
+function AbilityButton({
+  ability,
+  status,
+  onUse,
+}: {
+  ability: AbilityDefinition;
+  status: AbilityStatus;
+  onUse: () => void;
+}) {
+  const locked = !status.unlocked;
+  return (
+    <button
+      type="button"
+      onClick={onUse}
+      disabled={!status.ready}
+      title={locked ? `Unlocks at Nemesis level ${ability.unlockLevel}` : ability.rule}
+      className={`relative flex min-w-16 flex-col items-center gap-0.5 overflow-hidden rounded-lg border px-2.5 py-1.5 transition ${
+        status.ready
+          ? "nemesis-ready border-raid-success/35 bg-raid-success/10 text-raid-success enabled:hover:brightness-125"
+          : "border-raid-border bg-raid-fill text-raid-faint"
+      }`}
+    >
+      {status.cooldownPercent > 0 ? (
+        <span
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 bg-nemesis/15"
+          style={{ height: `${status.cooldownPercent}%` }}
+        />
+      ) : null}
+      <span className="relative flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.1em]">
+        <span aria-hidden>{locked ? "🔒" : ability.glyph}</span>
+        {ability.title}
+      </span>
+      <span className="relative font-mono text-[8px] uppercase tracking-[0.14em]">
+        {locked ? `Lv ${ability.unlockLevel}` : `${ability.bind} · ${ability.cost}`}
+      </span>
+      <span className="sr-only">
+        {locked
+          ? `Locked until Nemesis level ${ability.unlockLevel}.`
+          : `${ability.rule} Costs ${ability.cost} charge, bound to ${ability.bind}.`}
+      </span>
+    </button>
+  );
+}
+
+function MutationChips({ identity }: { identity: NemesisIdentity }) {
+  if (identity.mutations.length === 0) return null;
+  return (
+    <div className="mt-4">
+      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-raid-faint">What it has become</p>
+      <div className="mt-2 grid gap-1.5">
+        {identity.mutations.map((mutation) => {
+          const definition = mutationById(mutation.id);
+          const helpful = definition.onWin;
+          return (
+            <div
+              key={mutation.id}
+              className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 ${
+                helpful
+                  ? "border-raid-success/25 bg-raid-success/10"
+                  : "border-nemesis/25 bg-nemesis/10"
+              }`}
+            >
+              <span aria-hidden className={helpful ? "text-raid-success" : "text-nemesis"}>{definition.glyph}</span>
+              <span className={`text-[11px] font-bold ${helpful ? "text-raid-success" : "text-nemesis"}`}>
+                {definition.title}
+              </span>
+              <span className="font-mono text-[10px] text-raid-faint">×{mutation.stacks}</span>
+              <span className="ml-auto hidden text-[10px] text-raid-muted sm:inline">{definition.description}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** The rivalry at a glance: newest duel on the right, so it reads like a timeline. */
+function HistoryStrip({ history }: { history: readonly DuelRecord[] }) {
+  if (history.length === 0) return null;
+  const streak = duelStreak(history);
+  const recent = [...history].slice(0, 12).reverse();
+  return (
+    <div className="mt-4">
+      <div className="flex items-baseline justify-between">
+        <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-raid-faint">Duel history</p>
+        <p className="font-mono text-[10px] text-raid-muted">
+          {streak.current > 0
+            ? `${streak.current} won in a row`
+            : streak.current < 0
+              ? `${-streak.current} lost in a row`
+              : ""}
+        </p>
+      </div>
+      <div className="mt-2 flex items-end gap-1">
+        {recent.map((record) => (
+          <span
+            key={record.ts}
+            title={`Lv ${record.level} · ${record.outcome} · ${record.score.toLocaleString()} pts`}
+            className={`h-6 flex-1 rounded-[3px] ${
+              record.outcome === "victory" ? "bg-raid-success/70" : "bg-nemesis/60"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function NemesisGame() {
   const snapshot = useSyncExternalStore(resultsStore.subscribe, resultsStore.get, resultsStore.getServer);
-  const [storedIdentity, setStoredIdentity] = useState<NemesisIdentity | null>(null);
+  const nemesis = useSyncExternalStore(nemesisStore.subscribe, nemesisStore.get, nemesisStore.getServer);
+  const { settings } = useSettings();
+  // Mounted here rather than in the root layout: the rival only matters on this screen,
+  // and /games is already behind the auth gate.
+  useNemesisSync();
+  /** Null until read off the main thread; the page server-renders, storage does not. */
+  const [ledger, setLedger] = useState<ScarLedger | null>(null);
+  const [history, setHistory] = useState<DuelRecord[]>([]);
+  const [best, setBest] = useState(0);
   /** Null until the player starts: the dossier screen needs no run state. */
   const [game, setGame] = useState<NemesisState | null>(null);
   const [currentRunId, setCurrentRunId] = useState("");
   const [submission, setSubmission] = useState<"idle" | "saving" | "saved" | "best" | "error">("idle");
   const [progressReward, setProgressReward] = useState<ProgressReward | null>(null);
+  const [rank, setRank] = useState<number | null>(null);
+  const [deviceBest, setDeviceBest] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const [flash, setFlash] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const submitted = useRef(new Set<string>());
   const lastImpact = useRef(0);
+  const cues = useRef({ impact: 0, struck: 0, curseCast: 0, abilities: 0, correctKeys: 0 });
 
-  /** Everything the nemesis knows about the player, rebuilt whenever results change. */
-  const profile = useMemo(() => aggregateWeaknesses(snapshot.results), [snapshot.results]);
+  const soundOn = settings.sound;
 
   useEffect(() => {
-    queueMicrotask(() => setStoredIdentity(loadNemesisIdentity()));
+    queueMicrotask(() => {
+      setLedger(loadScarLedger());
+      setHistory(loadDuelHistory());
+      setBest(loadBest());
+    });
   }, []);
 
-  // Its identity tracks the player's current worst key, so it reforms as they improve.
+  /**
+   * Everything the nemesis knows about the player. The scar row goes first because
+   * `aggregateWeaknesses` only reads the newest results.
+   */
+  const profile = useMemo(() => {
+    const scar = ledger ? scarResult(ledger) : null;
+    return aggregateWeaknesses(scar ? [scar, ...snapshot.results] : snapshot.results);
+  }, [ledger, snapshot.results]);
+
+  // Its identity tracks the player's current worst key, so it reforms as they improve —
+  // but a trophy is only awarded when the duels prove the old key is genuinely clean.
   const identity = useMemo(
-    () => (storedIdentity && snapshot.hydrated && profile.hasHistory
-      ? reforgeIdentity(storedIdentity, profile)
-      : storedIdentity),
-    [profile, snapshot.hydrated, storedIdentity],
+    () => (nemesis.hydrated && snapshot.hydrated && profile.hasHistory
+      ? reforgeIdentity(nemesis.identity, profile, (key) => (ledger ? isKeyBroken(ledger, key) : false))
+      : nemesis.identity),
+    [ledger, nemesis.hydrated, nemesis.identity, profile, snapshot.hydrated],
   );
 
   useEffect(() => {
-    if (identity && identity !== storedIdentity) saveNemesisIdentity(identity);
-  }, [identity, storedIdentity]);
+    if (identity !== nemesis.identity) nemesisStore.set(identity);
+  }, [identity, nemesis.identity]);
 
   const start = useCallback(() => {
-    if (!identity) return;
     setCurrentRunId(runId());
     setSubmission("idle");
     setProgressReward(null);
+    setRank(null);
+    setDeviceBest(false);
     setGame(createNemesisRun(identity, profile));
     window.setTimeout(() => inputRef.current?.focus(), 0);
   }, [identity, profile]);
@@ -220,30 +406,93 @@ export function NemesisGame() {
     return () => window.clearTimeout(timer);
   }, [game]);
 
+  /**
+   * Audio is driven by diffing the state's monotonic counters, never by the reducer:
+   * the game module stays pure and a new run (counters back at zero) makes no noise.
+   */
+  useEffect(() => {
+    if (!game) return;
+    const previous = cues.current;
+    const next = {
+      impact: game.impact,
+      struck: game.struck,
+      curseCast: game.curseCast,
+      abilities: abilitiesUsed(game),
+      correctKeys: game.correctKeys,
+    };
+    cues.current = next;
+    if (!soundOn) return;
+    if (next.correctKeys > previous.correctKeys) playSound("key");
+    if (next.struck > previous.struck) playSound("strike");
+    if (next.impact > previous.impact) playSound("wound");
+    if (next.curseCast > previous.curseCast) playSound("curse");
+    if (next.abilities > previous.abilities) playSound("ability");
+  }, [game, soundOn]);
+
+  useEffect(() => {
+    if (soundOn && phase === "won") playSound("victory");
+  }, [phase, soundOn]);
+
   useEffect(() => {
     if (!game || (game.phase !== "won" && game.phase !== "lost")) return;
     if (!currentRunId || submitted.current.has(currentRunId)) return;
     submitted.current.add(currentRunId);
 
     const won = game.phase === "won";
+    const score = nemesisScore(game);
+    const autopsy = nemesisAutopsy(game);
+
     const evolved = evolveIdentity(game.identity, won);
-    saveNemesisIdentity(evolved);
-    setStoredIdentity(evolved);
+    const duels = nemesis.duels + 1;
+    nemesisStore.set(evolved, duels);
+    // Fire and forget: the overlay never waits on the rival following them to a new device.
+    void syncNemesisIdentity({ identity: evolved, duels })
+      .then((response) => {
+        if (response.ok) nemesisStore.setServer(response.identity, response.duels);
+      })
+      .catch(() => undefined);
+
+    // The duel's per-key record is the whole point of the mode; keep it.
+    const nextLedger = recordDuel(game.keyDuel);
+    setLedger(nextLedger);
+    const masteredKeys = scarStats(nextLedger).mastered.length;
+
+    setHistory(recordDuelResult({
+      ts: Date.now(),
+      level: game.identity.level,
+      outcome: won ? "victory" : "defeat",
+      score,
+      wpm: nemesisWpm(game),
+      accuracy: nemesisAccuracy(game),
+      words: game.words,
+      bestCombo: game.bestCombo,
+      brokenKeys: autopsy.filter((verdict) => verdict.broken).map((verdict) => verdict.key),
+      signature: game.identity.signature,
+    }));
+
+    const nextBest = Math.max(best, score);
+    setBest(nextBest);
+    setDeviceBest(score > best);
+    saveBest(nextBest);
 
     setSubmission("saving");
     void saveGameRun({
       clientId: currentRunId,
       gameId: "nemesis",
-      score: nemesisScore(game),
+      score,
       wpm: nemesisWpm(game),
       accuracy: nemesisAccuracy(game),
       words: game.words,
       bestCombo: game.bestCombo,
       nemesisLevel: game.identity.level,
       outcome: won ? "victory" : "defeat",
+      nemesisFlawless: nemesisFlawless(game),
+      nemesisAbilitiesUsed: abilitiesUsed(game),
+      nemesisFullKit: usedFullKit(game),
+      nemesisMasteredKeys: masteredKeys,
       durationMs: Math.round(game.elapsedMs),
     })
-      .then((response) => {
+      .then(async (response) => {
         if (!response.ok) {
           setSubmission("error");
           return;
@@ -251,9 +500,26 @@ export function NemesisGame() {
         progressionStore.setServer(response.progress);
         setProgressReward(response.reward);
         setSubmission(response.isPersonalBest ? "best" : "saved");
+        if (response.reward.levelAfter > response.reward.levelBefore) {
+          setToast(`Level ${response.reward.levelAfter} reached`);
+        } else if (response.reward.unlockedAchievements[0]) {
+          setToast(`${achievementById(response.reward.unlockedAchievements[0]).title} unlocked`);
+        }
+        try {
+          // Ranks come from a 30s-cached board, so this is "about where you stand".
+          const board = await fetch("/api/leaderboard?gameId=nemesis");
+          const data = (await board.json()) as { yourRank: number | null };
+          setRank(data.yourRank);
+        } catch {
+          setRank(null);
+        }
       })
       .catch(() => setSubmission("error"));
-  }, [currentRunId, game]);
+  }, [best, currentRunId, game, nemesis.duels]);
+
+  const runAbility = useCallback((id: AbilityId) => {
+    setGame((current) => (current ? spendAbility(current, id) : current));
+  }, []);
 
   const onKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
@@ -263,17 +529,24 @@ export function NemesisGame() {
     }
     if (event.key === "Tab") {
       event.preventDefault();
-      setGame((current) => (current ? purgeNemesis(current) : current));
+      runAbility("purge");
       return;
     }
     if (event.ctrlKey || event.metaKey || event.altKey) return;
+    // Binds are claimed before typing, so a digit can never count as a mistyped key.
+    const bound = DIGIT_BINDS[event.key];
+    if (bound) {
+      event.preventDefault();
+      runAbility(bound);
+      return;
+    }
     if (event.key === "Backspace" || event.key.length === 1) {
       event.preventDefault();
       setGame((current) => (current ? typeNemesisKey(current, event.key, profile) : current));
     }
-  }, [profile]);
+  }, [profile, runAbility]);
 
-  if (!identity) {
+  if (!nemesis.hydrated) {
     return (
       <NemesisShell>
         <p className="m-auto font-mono text-[10px] uppercase tracking-[0.24em] text-raid-faint">Reading the mirror…</p>
@@ -282,6 +555,7 @@ export function NemesisGame() {
   }
 
   if (!game) {
+    const scars = ledger ? scarStats(ledger) : null;
     return (
       <NemesisShell>
         <ArenaHeader paused={false} canPause={false} onPause={() => undefined} />
@@ -310,6 +584,32 @@ export function NemesisGame() {
             ))}
           </div>
 
+          <div className="mt-6">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-raid-faint">Your kit</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {ABILITIES.map((ability) => {
+                const locked = identity.level < ability.unlockLevel;
+                return (
+                  <div
+                    key={ability.id}
+                    className={`rounded-xl border p-3.5 ${locked ? "border-raid-border bg-raid-fill opacity-60" : "border-raid-success/25 bg-raid-success/5"}`}
+                  >
+                    <p className="flex items-center gap-2 text-xs font-bold text-raid-text">
+                      <span aria-hidden className={locked ? "text-raid-faint" : "text-raid-success"}>
+                        {locked ? "🔒" : ability.glyph}
+                      </span>
+                      {ability.title}
+                      <span className="ml-auto font-mono text-[9px] uppercase tracking-[0.14em] text-raid-faint">
+                        {locked ? `Level ${ability.unlockLevel}` : `${ability.bind} · ${ability.cost} charge`}
+                      </span>
+                    </p>
+                    <p className="mt-1.5 text-[11px] leading-5 text-raid-faint">{ability.rule}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
               type="button"
@@ -319,9 +619,17 @@ export function NemesisGame() {
               Face it <span className="transition-transform group-hover:translate-x-1">→</span>
             </button>
             <p className="text-[10px] leading-5 text-raid-faint">
-              Type to strike · <strong className="text-raid-text">Tab</strong> purges a curse · Esc pauses
+              Type to strike · <strong className="text-raid-text">Tab</strong> purges · <strong className="text-raid-text">1–3</strong> abilities · Esc pauses
             </p>
           </div>
+
+          {best > 0 || scars?.duels ? (
+            <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 font-mono text-[10px] uppercase tracking-[0.14em] text-raid-faint">
+              {best > 0 ? <span>Best on this device <strong className="text-raid-text">{best.toLocaleString()}</strong></span> : null}
+              {scars?.duels ? <span>Duels recorded <strong className="text-raid-text">{scars.duels}</strong></span> : null}
+              {scars?.mastered.length ? <span>Keys proven clean <strong className="text-raid-success">{scars.mastered.length}</strong></span> : null}
+            </div>
+          ) : null}
         </section>
 
         <section className="relative overflow-hidden rounded-[2rem] border border-nemesis/25 bg-raid-surface-soft p-6 shadow-[0_35px_100px_-55px_var(--nemesis-text)] sm:p-8" aria-label="Nemesis dossier">
@@ -362,6 +670,9 @@ export function NemesisGame() {
               </p>
             ) : null}
 
+            <MutationChips identity={identity} />
+            <HistoryStrip history={history} />
+
             {identity.masteredKeys.length > 0 ? (
               <div className="mt-4">
                 <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-raid-faint">Keys you took back</p>
@@ -390,12 +701,15 @@ export function NemesisGame() {
   const wpm = nemesisWpm(game);
   const score = nemesisScore(game);
   const autopsy = nemesisAutopsy(game);
+  const bossPhase = phaseFor(game);
   const veiled = game.curse?.id === "veil" && typedLength > 0;
   const won = game.phase === "won";
   const finished = game.phase === "won" || game.phase === "lost";
 
   return (
     <NemesisShell flash={flash}>
+      {won ? <Confetti label={`${game.identity.name} broken`} kicker="Duel won" /> : null}
+      <Toast message={toast} onDismiss={() => setToast(null)} />
       <ArenaHeader
         paused={game.phase === "paused"}
         canPause={game.phase === "playing" || game.phase === "paused"}
@@ -407,7 +721,15 @@ export function NemesisGame() {
             <Sigil signature={game.identity.signature} level={game.identity.level} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-black uppercase tracking-[0.06em] sm:text-sm">{game.identity.name}</p>
+            <div className="flex items-baseline gap-2">
+              <p className="truncate text-xs font-black uppercase tracking-[0.06em] sm:text-sm">{game.identity.name}</p>
+              <span
+                key={bossPhase.id}
+                className="nemesis-phase-shift shrink-0 font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-nemesis"
+              >
+                {bossPhase.title}
+              </span>
+            </div>
             <div className="mt-1.5">
               <HealthBar label={`Lv ${game.identity.level}`} value={game.nemesisHp} max={game.nemesisMaxHp} tone="nemesis" />
             </div>
@@ -415,10 +737,13 @@ export function NemesisGame() {
           <div className="hidden text-right sm:block">
             <p className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-raid-faint">Score</p>
             <p className="font-mono text-xl font-black tabular-nums text-nemesis">{score.toLocaleString()}</p>
+            {best > 0 ? (
+              <p className="font-mono text-[8px] uppercase tracking-[0.16em] text-raid-faint">best {best.toLocaleString()}</p>
+            ) : null}
           </div>
         </section>
 
-        <section className="relative flex min-h-[20rem] flex-1 flex-col items-center justify-center overflow-hidden rounded-[1.75rem] border border-raid-border bg-raid-surface-soft px-4 py-8">
+        <section className={`relative flex min-h-[20rem] flex-1 flex-col items-center justify-center overflow-hidden rounded-[1.75rem] border border-raid-border bg-raid-surface-soft px-4 py-8 ${game.ward > 0 ? "nemesis-ward" : ""}`}>
           <div aria-hidden className="nemesis-veins absolute inset-0 opacity-40" />
 
           {game.curse ? (
@@ -457,6 +782,7 @@ export function NemesisGame() {
             </div>
             <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.2em] text-raid-faint">
               fuse · {(game.strike.remainingMs / 1000).toFixed(1)}s
+              {game.ward > 0 ? <span className="text-raid-success"> · bulwark {(game.ward / 1000).toFixed(0)}s</span> : null}
             </p>
           </div>
 
@@ -500,6 +826,11 @@ export function NemesisGame() {
                     <p className={`mt-1 font-mono text-4xl font-black sm:text-5xl ${won ? "text-raid-success" : "text-nemesis"}`}>
                       {score.toLocaleString()}
                     </p>
+                    {deviceBest ? (
+                      <p className="mt-1 font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-raid-success">
+                        Best on this device
+                      </p>
+                    ) : null}
                   </div>
                 </div>
 
@@ -512,14 +843,14 @@ export function NemesisGame() {
                     : submission === "error"
                       ? "Score and progress could not be saved"
                       : progressReward
-                        ? `+${progressReward.earnedXp} XP earned${progressReward.unlockedAchievements[0] ? ` · ${achievementById(progressReward.unlockedAchievements[0]).title} unlocked` : ""}${submission === "best" ? " · new personal best" : ""}`
+                        ? `+${progressReward.earnedXp} XP earned${progressReward.unlockedAchievements[0] ? ` · ${achievementById(progressReward.unlockedAchievements[0]).title} unlocked` : ""}${submission === "best" ? " · new personal best" : ""}${rank !== null ? ` · about #${rank} on the board` : ""}`
                         : ""}
                 </p>
 
                 <p className="mt-3 rounded-xl border border-nemesis/25 bg-nemesis/10 px-4 py-3 text-xs leading-5 text-raid-muted">
                   {won
-                    ? `It reassembles at level ${identity.level}. Stronger, and still made of you.`
-                    : `Its grudge rises to ${identity.grudge}. The next duel opens harder.`}
+                    ? `It reassembles at level ${nemesis.identity.level}. Stronger, and still made of you.`
+                    : `Its grudge rises to ${nemesis.identity.grudge}. The next duel opens harder.`}
                 </p>
 
                 <div className="mt-5 grid grid-cols-2 divide-raid-border overflow-hidden rounded-xl border border-raid-border bg-raid-fill py-3 sm:grid-cols-4 sm:divide-x">
@@ -547,6 +878,9 @@ export function NemesisGame() {
                       ))}
                     </div>
                   )}
+                  <p className="mt-2 text-[10px] text-raid-faint">
+                    These keys now feed your adaptive practice.
+                  </p>
                 </div>
 
                 <div className="mt-6 flex flex-col gap-2 sm:flex-row">
@@ -566,32 +900,39 @@ export function NemesisGame() {
         </section>
 
         <section className="grid gap-3 rounded-2xl border border-raid-border bg-raid-surface-soft p-3 sm:grid-cols-[1.1fr_auto] sm:items-center sm:px-5">
-          <HealthBar label="You" value={game.playerHp} max={NEMESIS_PLAYER_HP} tone="player" />
-          <div className="flex items-center justify-between gap-4 sm:justify-end">
+          <div>
+            <HealthBar label="You" value={game.playerHp} max={NEMESIS_PLAYER_HP} tone="player" />
+            <div className="mt-2 flex items-center gap-2">
+              <span className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] text-raid-faint">Charge</span>
+              <span aria-hidden className="flex gap-0.5">
+                {Array.from({ length: NEMESIS_CHARGE_MAX }, (_, index) => (
+                  <span
+                    key={index}
+                    className={`h-2.5 w-1.5 rounded-[1px] ${index < game.abilities.charge ? "bg-raid-success" : "bg-raid-border"}`}
+                  />
+                ))}
+              </span>
+              <span className="sr-only">
+                {game.abilities.charge} of {NEMESIS_CHARGE_MAX} ability charge
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-2">
             <div className="flex gap-4 font-mono text-[9px] text-raid-faint">
               <span><strong className="text-raid-text">{game.combo}×</strong> combo</span>
               <span><strong className="text-raid-text">{accuracy.toFixed(0)}%</strong> acc</span>
               <span className="hidden sm:inline"><strong className="text-raid-text">{wpm}</strong> wpm</span>
             </div>
-            <button
-              type="button"
-              onClick={() => setGame(purgeNemesis(game))}
-              disabled={game.purge < NEMESIS_PURGE_COST || game.phase !== "playing"}
-              className="flex items-center gap-2 rounded-lg border border-raid-success/35 bg-raid-success/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-raid-success transition enabled:hover:brightness-125 disabled:border-raid-border disabled:bg-raid-fill disabled:text-raid-faint"
-            >
-              Purge
-              <span aria-hidden className="flex gap-0.5">
-                {Array.from({ length: NEMESIS_PURGE_COST }, (_, index) => (
-                  <span
-                    key={index}
-                    className={`h-2.5 w-1 rounded-[1px] ${index < game.purge ? "bg-raid-success" : "bg-raid-border"}`}
-                  />
-                ))}
-              </span>
-              <span className="sr-only">
-                {game.purge} of {NEMESIS_PURGE_COST} charges — clears the active curse and counter-attacks
-              </span>
-            </button>
+            <div className="flex flex-wrap justify-end gap-1.5">
+              {ABILITIES.map((ability) => (
+                <AbilityButton
+                  key={ability.id}
+                  ability={ability}
+                  status={abilityStatus(game, ability.id)}
+                  onUse={() => runAbility(ability.id)}
+                />
+              ))}
+            </div>
           </div>
         </section>
 

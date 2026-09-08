@@ -13,6 +13,7 @@ export async function createIndexes(): Promise<void> {
     userTypingAnalytics,
     userProgress,
     gamePersonalBests,
+    nemesisIdentities,
     dailyChallengeResults,
   } = await collections();
   await results.createIndexes([
@@ -65,6 +66,10 @@ export async function createIndexes(): Promise<void> {
       name: "game_personal_bests_leaderboard",
     },
   ]);
+  await nemesisIdentities.createIndex(
+    { userId: 1 },
+    { name: "nemesis_identity_user_unique", unique: true },
+  );
   await dailyChallengeResults.createIndexes([
     {
       key: { challengeId: 1, userId: 1 },

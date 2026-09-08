@@ -21,7 +21,17 @@ type BaseGameRun = {
 export type GameRun = BaseGameRun & (
   | { gameId: "typeraid"; roomsCleared: number; outcome: "victory" | "defeat" }
   | { gameId: "wordfall"; wave: number; missedWords: number }
-  | { gameId: "nemesis"; nemesisLevel: number; outcome: "victory" | "defeat" }
+  | {
+    gameId: "nemesis";
+    nemesisLevel: number;
+    outcome: "victory" | "defeat";
+    /** Optional so a client from before the ability kit still validates. */
+    nemesisFlawless?: boolean;
+    nemesisAbilitiesUsed?: number;
+    /** True when every ability the player has unlocked was used in the duel. */
+    nemesisFullKit?: boolean;
+    nemesisMasteredKeys?: number;
+  }
 );
 
 function scoreFields(
@@ -32,7 +42,14 @@ function scoreFields(
   const gameFields = run.gameId === "typeraid"
     ? { roomsCleared: run.roomsCleared, outcome: run.outcome }
     : run.gameId === "nemesis"
-      ? { nemesisLevel: run.nemesisLevel, outcome: run.outcome }
+      ? {
+        nemesisLevel: run.nemesisLevel,
+        outcome: run.outcome,
+        nemesisFlawless: run.nemesisFlawless,
+        nemesisAbilitiesUsed: run.nemesisAbilitiesUsed,
+        nemesisFullKit: run.nemesisFullKit,
+        nemesisMasteredKeys: run.nemesisMasteredKeys,
+      }
       : { wave: run.wave, missedWords: run.missedWords };
   return {
     userId: user.id,

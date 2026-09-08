@@ -4,6 +4,7 @@ import type { Mode } from "@/lib/engine";
 import type { CharStats, Sample } from "@/lib/metrics";
 import type { WeaknessSummary } from "@/lib/weakness";
 import type { ProgressState } from "@/lib/progression";
+import type { NemesisIdentity } from "@/lib/games/nemesis";
 
 export type ResultDoc = {
   _id: ObjectId;
@@ -67,6 +68,16 @@ export type UserProgressDoc = {
   updatedAt: Date;
 };
 
+export type NemesisIdentityDoc = {
+  _id: ObjectId;
+  userId: string;
+  revision: number;
+  identity: NemesisIdentity;
+  /** Lifetime duels; the tiebreaker when two devices disagree about the rival. */
+  duels: number;
+  updatedAt: Date;
+};
+
 export type GamePersonalBestDoc = {
   _id: ObjectId;
   userId: string;
@@ -84,6 +95,10 @@ export type GamePersonalBestDoc = {
   wave?: number;
   missedWords?: number;
   nemesisLevel?: number;
+  nemesisFlawless?: boolean;
+  nemesisAbilitiesUsed?: number;
+  nemesisFullKit?: boolean;
+  nemesisMasteredKeys?: number;
   durationMs: number;
   attempts: number;
   processedRunIds: string[];
@@ -134,6 +149,7 @@ export async function collections(): Promise<{
   userTypingAnalytics: Collection<UserTypingAnalyticsDoc>;
   userProgress: Collection<UserProgressDoc>;
   gamePersonalBests: Collection<GamePersonalBestDoc>;
+  nemesisIdentities: Collection<NemesisIdentityDoc>;
   dailyChallengeResults: Collection<DailyChallengeDoc>;
 }> {
   const db = await getDb();
@@ -144,6 +160,7 @@ export async function collections(): Promise<{
     userTypingAnalytics: db.collection<UserTypingAnalyticsDoc>("user_typing_analytics"),
     userProgress: db.collection<UserProgressDoc>("user_progress"),
     gamePersonalBests: db.collection<GamePersonalBestDoc>("game_personal_bests"),
+    nemesisIdentities: db.collection<NemesisIdentityDoc>("nemesis_identities"),
     dailyChallengeResults: db.collection<DailyChallengeDoc>("daily_challenge_results"),
   };
 }
