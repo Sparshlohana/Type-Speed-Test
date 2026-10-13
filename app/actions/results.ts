@@ -63,6 +63,59 @@ export async function saveResult(input: unknown): Promise<SaveResultResponse> {
     updatePersonalBest(user, validation.value),
     storeResultSamples(user.id, [validation.value]),
   ]);
+
+  // Mirror persisted daily runs into the daily leaderboard as a safeguard:
+  // the regular result save must not succeed while the daily score stays stale.
+  if (validation.value.mode.kind === "daily") {
+    const { dailyChallengeResults } = await collections();
+    const challengeId = validation.value.mode.challengeId;
+    const now = Date.now();
+    const expiresAt = new Date(now + 90 * 24 * 60 * 60 * 1000);
+    await dailyChallengeResults.updateOne(
+      { challengeId, userId: user.id },
+      {
+        $set: {
+          username: user.name || "TypeFlow user",
+          image: user.image ?? null,
+          expiresAt,
+        },
+        $setOnInsert: {
+          _id: new ObjectId(),
+          challengeId,
+          userId: user.id,
+          clientId: validation.value.id,
+          wpm: validation.value.wpm,
+          accuracy: validation.value.accuracy,
+          consistency: validation.value.consistency,
+          durationMs: validation.value.durationMs,
+          attempts: 0,
+          updatedAt: now,
+        },
+      },
+      { upsert: true },
+    );
+    await dailyChallengeResults.updateOne(
+      {
+        challengeId,
+        userId: user.id,
+        $or: [
+          { wpm: { $lt: validation.value.wpm } },
+          { wpm: validation.value.wpm, accuracy: { $lt: validation.value.accuracy } },
+        ],
+      },
+      {
+        $set: {
+          clientId: validation.value.id,
+          wpm: validation.value.wpm,
+          accuracy: validation.value.accuracy,
+          consistency: validation.value.consistency,
+          durationMs: validation.value.durationMs,
+          updatedAt: now,
+          expiresAt,
+        },
+      },
+    );
+  }
   if (stored.upsertedCount > 0) {
     await Promise.all([
       addToUserAnalytics(user.id, [validation.value]),
