@@ -118,29 +118,32 @@ export async function submitDailyResult(input: unknown): Promise<SubmitDailyResp
     { upsert: true },
   );
 
-  const current = await dailyChallengeResults.findOne({ challengeId: today, userId: user.id });
-  const isBetter =
-    current &&
-    (result.wpm > current.wpm ||
-      (result.wpm === current.wpm && result.accuracy > current.accuracy));
-  if (current && isBetter) {
-    await dailyChallengeResults.updateOne(
-      { _id: current._id },
-      {
-        $set: {
-          clientId: result.id,
-          wpm: result.wpm,
-          accuracy: result.accuracy,
-          consistency: result.consistency,
-          durationMs: result.durationMs,
-          updatedAt,
-          expiresAt,
-        },
+  // Update the stored best with a conditional write. Keeping the comparison in
+  // the MongoDB filter avoids a read-then-write race when attempts finish close
+  // together (or a submission is retried).
+  await dailyChallengeResults.updateOne(
+    {
+      challengeId: today,
+      userId: user.id,
+      $or: [
+        { wpm: { $lt: result.wpm } },
+        { wpm: result.wpm, accuracy: { $lt: result.accuracy } },
+      ],
+    },
+    {
+      $set: {
+        clientId: result.id,
+        wpm: result.wpm,
+        accuracy: result.accuracy,
+        consistency: result.consistency,
+        durationMs: result.durationMs,
+        updatedAt,
+        expiresAt,
       },
-    );
-  }
+    },
+  );
 
-  const score = isBetter ? result : current;
+  const score = await dailyChallengeResults.findOne({ challengeId: today, userId: user.id });
   if (!score) return { ok: false, error: "Daily result could not be saved." };
   const ahead = await dailyChallengeResults.countDocuments({
     challengeId: today,
