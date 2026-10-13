@@ -91,7 +91,6 @@ export async function saveResult(input: unknown): Promise<SaveResultResponse> {
           attempts: 0,
           updatedAt: now,
         },
-        $inc: { attempts: 1 },
       },
       { upsert: true },
     );
